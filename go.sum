@@ -81,6 +81,12 @@ github.com/arpad-csepi/kubereflex v0.0.0-20221018191539-3ec7bd7738b1 h1:lzimqTxW
 github.com/arpad-csepi/kubereflex v0.0.0-20221018191539-3ec7bd7738b1/go.mod h1:1+oWIKrnZRsOlKM+fWjBD3mQ6ZC4AkAZpTIsu1ahPcM=
 github.com/arpad-csepi/kubereflex v0.0.0-20221029163043-dd931f5a0610 h1:Wvky8SRS7kobTubPHxEc8IkJSE5G9sridiLrk/+PJIY=
 github.com/arpad-csepi/kubereflex v0.0.0-20221029163043-dd931f5a0610/go.mod h1:1+oWIKrnZRsOlKM+fWjBD3mQ6ZC4AkAZpTIsu1ahPcM=
+github.com/arpad-csepi/kubereflex v0.0.0-20221030133001-162748c568a0 h1:6MxoVgPaSCflgo3cMA8XDQisOgUhwNzN+P95iv3gsG0=
+github.com/arpad-csepi/kubereflex v0.0.0-20221030133001-162748c568a0/go.mod h1:1+oWIKrnZRsOlKM+fWjBD3mQ6ZC4AkAZpTIsu1ahPcM=
+github.com/arpad-csepi/kubereflex v0.0.0-20221030134011-a38e2fd0c6c7 h1:XszRN5e8hGKQfKlFsyVVtwq4DICJq4DrovDpnMWGrLQ=
+github.com/arpad-csepi/kubereflex v0.0.0-20221030134011-a38e2fd0c6c7/go.mod h1:1+oWIKrnZRsOlKM+fWjBD3mQ6ZC4AkAZpTIsu1ahPcM=
+github.com/arpad-csepi/kubereflex v0.0.0-20221030134319-0e818cef9065 h1:dMTY4HORXJOpZnEXGeFxi5w0MjOkxwbRNKXcdlCLwzQ=
+github.com/arpad-csepi/kubereflex v0.0.0-20221030134319-0e818cef9065/go.mod h1:1+oWIKrnZRsOlKM+fWjBD3mQ6ZC4AkAZpTIsu1ahPcM=
 github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 h1:4daAzAu0S6Vi7/lbWECcX0j45yZReDZ56BQsrVBOEEY=
 github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535/go.mod h1:oGkLhpf+kjZl6xBf758TQhh5XrAeiJv/7FRz/2spLIg=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=

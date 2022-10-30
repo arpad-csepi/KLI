@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	kubereflex "github.com/arpad-csepi/kubereflex"
 )
 
 // uninstallCmd represents the uninstall command
@@ -21,7 +23,26 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("uninstall called")
+		switch resource_name, _ := cmd.Flags().GetString("resource"); resource_name {
+		case "istio-operator":
+			var (
+				// chartName      = "istio-operator"
+				releaseName = "banzaicloud-stable"
+				namespace   = "istio-system"
+			)
+
+			kubereflex.UninstallHelmChart(releaseName, namespace)
+		case "cluster-registry":
+			var (
+				// chartName      = "cluster-registry"
+				releaseName = "cluster-registry"
+				namespace   = "cluster-registry"
+			)
+
+			kubereflex.UninstallHelmChart(releaseName, namespace)
+		default:
+			fmt.Printf("Unknown resource")
+		}
 	},
 }
 
@@ -37,4 +58,7 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	uninstallCmd.Flags().StringVarP(&resource, "resource", "r", "", "Resource is required")
+	uninstallCmd.MarkFlagRequired("resource")
 }

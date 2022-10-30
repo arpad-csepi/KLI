@@ -3,7 +3,7 @@ module github.com/arpad-csepi/KLI
 go 1.18
 
 require (
-	github.com/arpad-csepi/kubereflex v0.0.0-20221029163043-dd931f5a0610
+	github.com/arpad-csepi/kubereflex v0.0.0-20221030134319-0e818cef9065
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/viper v1.13.0
 	k8s.io/client-go v0.25.3
