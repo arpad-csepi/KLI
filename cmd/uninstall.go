@@ -1,12 +1,10 @@
 /*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+Copyright © 2022 Árpád Csepi csepi.arpad@outlook.com
 
 */
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	kubereflex "github.com/arpad-csepi/kubereflex"
@@ -23,26 +21,9 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		switch resource_name, _ := cmd.Flags().GetString("resource"); resource_name {
-		case "istio-operator":
-			var (
-				// chartName      = "istio-operator"
-				releaseName = "banzaicloud-stable"
-				namespace   = "istio-system"
-			)
-
-			kubereflex.UninstallHelmChart(releaseName, namespace)
-		case "cluster-registry":
-			var (
-				// chartName      = "cluster-registry"
-				releaseName = "cluster-registry"
-				namespace   = "cluster-registry"
-			)
-
-			kubereflex.UninstallHelmChart(releaseName, namespace)
-		default:
-			fmt.Printf("Unknown resource")
-		}
+		// Uninstall istio-operator and cluster-registry-controller automaticly
+		kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system")
+		kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry")
 	},
 }
 
@@ -58,7 +39,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	uninstallCmd.Flags().StringVarP(&resource, "resource", "r", "", "Resource is required")
-	uninstallCmd.MarkFlagRequired("resource")
+	uninstallCmd.Flags().StringVarP(&custom_resource_path, "custom_resource_path", "c", "", "Specify custom resource file location")
 }

@@ -21,38 +21,27 @@ import (
 // installCmd represents the install command
 var installCmd = &cobra.Command{
 	Use:   "install",
-	Short: "Install a resource",
+	Short: "Install istio-operator and cluster-registry-controller",
 	Long:  `TODO`,
 	Run: func(cmd *cobra.Command, args []string) {
+    var kubeconfig = getKubeConfig()
 
-		switch resource_name, _ := cmd.Flags().GetString("resource"); resource_name {
-		case "istio-operator":
-			var (
-				chartUrl       = "https://kubernetes-charts.banzaicloud.com"
-				repositoryName = "banzaicloud-stable"
-				chartName      = "istio-operator"
-				releaseName    = "banzaicloud-stable"
-				namespace      = "istio-system"
-			)
+		// Install istio-operator and cluster-registry-controller automaticly
+		kubereflex.InstallHelmChart("https://kubernetes-charts.banzaicloud.com", "banzaicloud-stable", "istio-operator", "banzaicloud-stable", "istio-system", nil, kubeconfig)
+  	kubereflex.InstallHelmChart("https://cisco-open.github.io/cluster-registry-controller", "cluster-registry", "cluster-registry", "cluster-registry", "cluster-registry", nil, kubeconfig)
 
-			kubereflex.InstallHelmChart(chartUrl, repositoryName, chartName, releaseName, namespace, nil, getKubeConfig())
-		case "cluster-registry":
-			var (
-				chartUrl       = "https://cisco-open.github.io/cluster-registry-controller"
-				repositoryName = "cluster-registry"
-				chartName      = "cluster-registry"
-				releaseName    = "cluster-registry"
-				namespace      = "cluster-registry"
-			)
-
-			kubereflex.InstallHelmChart(chartUrl, repositoryName, chartName, releaseName, namespace, nil, getKubeConfig())
-		default:
-			fmt.Printf("Unknown resource")
+		custom_resource_path, err := cmd.Flags().GetString("custom_resource_path")
+		if err != nil {
+			panic("Custom resource error")
+		}
+		if custom_resource_path != "" {
+			fmt.Println("Custom resource has called")
+			fmt.Println(custom_resource_path)
 		}
 	},
 }
 
-var resource string
+var custom_resource_path string
 
 func init() {
 	rootCmd.AddCommand(installCmd)
@@ -69,8 +58,7 @@ func init() {
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	installCmd.Flags().StringVarP(&resource, "resource", "r", "", "Resource is required")
-	installCmd.MarkFlagRequired("resource")
+	installCmd.Flags().StringVarP(&custom_resource_path, "custom_resource_path", "c", "", "Specify custom resource file location")
 }
 
 func getKubeConfig() *string {
