@@ -11,11 +11,22 @@ import (
 
 	"flag"
 	"path/filepath"
+	"time"
 
 	"k8s.io/client-go/util/homedir"
 
 	kubereflex "github.com/arpad-csepi/kubereflex"
 )
+
+type chartData struct {
+	chartUrl string
+	repositoryName string
+	chartName string
+	releaseName string
+	namespace string
+	arguments map[string]string
+	deploymentName string
+}
 
 // TODO: Fill up long description
 // installCmd represents the install command
@@ -24,15 +35,53 @@ var installCmd = &cobra.Command{
 	Short: "Install istio-operator and cluster-registry-controller",
 	Long:  `TODO`,
 	Run: func(cmd *cobra.Command, args []string) {
-    var kubeconfig = getKubeConfig()
+		var kubeconfig = getKubeConfig()
+
+		charts := []chartData{}
+
+		// TODO: Read helm chart data from file
+		charts = append(charts, chartData {
+			chartUrl : "https://kubernetes-charts.banzaicloud.com",
+			repositoryName : "banzaicloud-stable",
+			chartName : "istio-operator",
+			releaseName : "banzaicloud-stable",
+			namespace : "istio-system",
+			arguments : nil,
+		})
+		charts = append(charts, chartData {
+			chartUrl : "https://cisco-open.github.io/cluster-registry-controller",
+			repositoryName : "cluster-registry",
+			chartName : "cluster-registry",
+			releaseName : "cluster-registry",
+			namespace : "cluster-registry",
+			arguments : nil,
+		})
 
 		// Install istio-operator and cluster-registry-controller automaticly
-		kubereflex.InstallHelmChart("https://kubernetes-charts.banzaicloud.com", "banzaicloud-stable", "istio-operator", "banzaicloud-stable", "istio-system", nil, kubeconfig)
-  	kubereflex.InstallHelmChart("https://cisco-open.github.io/cluster-registry-controller", "cluster-registry", "cluster-registry", "cluster-registry", "cluster-registry", nil, kubeconfig)
+		for _, chart := range charts {
+			// TODO: Get the deployment name from InstallHelmChart and store in chart.deploymentName
 
-		custom_resource_path, err := cmd.Flags().GetString("custom_resource_path")
+			kubereflex.InstallHelmChart(chart.chartUrl,
+				chart.repositoryName,
+				chart.chartName,
+				chart.releaseName,
+				chart.namespace,
+				chart.arguments,
+				kubeconfig)
+			}
+
+			charts[0].deploymentName = "banzaicloud-stable-istio-operator"
+			charts[1].deploymentName = "cluster-registry-controller"
+
+		if verify {
+			for _, chart := range charts {
+				kubereflex.Verify(chart.deploymentName, chart.namespace, kubeconfig, time.Duration(timeout) * time.Second)
+			}
+		}
+
+		custom_resource_path, err := cmd.Flags().GetString("custom-resource")
 		if err != nil {
-			panic("Custom resource error")
+			fmt.Printf("Custom resource error: %s", err.Error())
 		}
 		if custom_resource_path != "" {
 			fmt.Println("Custom resource has called")
@@ -42,6 +91,8 @@ var installCmd = &cobra.Command{
 }
 
 var custom_resource_path string
+var verify bool
+var timeout int
 
 func init() {
 	rootCmd.AddCommand(installCmd)
@@ -58,7 +109,9 @@ func init() {
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	installCmd.Flags().StringVarP(&custom_resource_path, "custom_resource_path", "c", "", "Specify custom resource file location")
+	installCmd.Flags().StringVarP(&custom_resource_path, "custom-resource", "c", "default_resource.yaml", "Specify custom resource file location")
+	installCmd.Flags().BoolVarP(&verify, "verify", "v", false, "Verify the deployment is ready or not")
+	installCmd.Flags().IntVarP(&timeout, "timeout", "t", 60, "Set verify timeout in seconds")
 }
 
 func getKubeConfig() *string {
