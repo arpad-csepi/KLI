@@ -84,8 +84,7 @@ var installCmd = &cobra.Command{
 			fmt.Printf("Custom resource error: %s", err.Error())
 		}
 		if custom_resource_path != "" {
-			fmt.Println("Custom resource has called")
-			fmt.Println(custom_resource_path)
+			kubereflex.Apply(custom_resource_path, kubeconfig)
 		}
 	},
 }
