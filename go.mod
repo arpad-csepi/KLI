@@ -2,8 +2,10 @@ module github.com/arpad-csepi/KLI
 
 go 1.18
 
+replace github.com/golang/protobuf => github.com/luciferinlove/protobuf v0.0.0-20220913214010-c63936d75066
+
 require (
-	github.com/arpad-csepi/kubereflex v0.0.0-20221123130035-9ea5ffbbd01b
+	github.com/arpad-csepi/kubereflex v0.0.0-20221124110306-99f0d3d5f6de
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
 	k8s.io/client-go v0.25.4

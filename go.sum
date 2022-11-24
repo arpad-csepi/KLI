@@ -75,6 +75,8 @@ github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/arpad-csepi/kubereflex v0.0.0-20221123130035-9ea5ffbbd01b h1:pgCsy0OGstPs6z0resPtupKBMGbS64DRaxkO59ElgZo=
 github.com/arpad-csepi/kubereflex v0.0.0-20221123130035-9ea5ffbbd01b/go.mod h1:iqDi0jVeOQtComfVxRbuFINhgIb0qqFr/7KVeo0xif8=
+github.com/arpad-csepi/kubereflex v0.0.0-20221124110306-99f0d3d5f6de h1:3HOHCQbWYmKqU3H7HbyAbtYcmdtzzHWoKMDieU1z030=
+github.com/arpad-csepi/kubereflex v0.0.0-20221124110306-99f0d3d5f6de/go.mod h1:p1JWGdBb3Dd82B/ELpbzUMD3myiVvsXEm8ZlNTo6UvI=
 github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d h1:Byv0BzEl3/e6D5CLfI0j/7hiIEtvGVFPCZ7Ei2oq8iQ=
 github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/banzaicloud/istio-operator/api/v2 v2.15.3 h1:6uKEWwxQHWS7J4koW/yzJZLBgeSwFjl2U10z1GVv5PA=
@@ -378,6 +380,8 @@ github.com/lib/pq v1.10.7 h1:p7ZhMD+KsSRozJr34udlUrhboJwWAgCg34+/ZZNvZZw=
 github.com/lib/pq v1.10.7/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
 github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de h1:9TO3cAIGXtEhnIaL+V+BEER86oLrvS+kWobKpbJuye0=
 github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de/go.mod h1:zAbeS9B/r2mtpb6U+EI2rYA5OAXxsYw6wTamcNW+zcE=
+github.com/luciferinlove/protobuf v0.0.0-20220913214010-c63936d75066 h1:BQKOM2ATglKs0TQ55cJ/PDzqKjpzJ8P8UANBeifLHdY=
+github.com/luciferinlove/protobuf v0.0.0-20220913214010-c63936d75066/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
 github.com/magiconair/properties v1.8.5/go.mod h1:y3VJvCyxH9uVvJTWEGAELF3aiYNyPKd5NZ3oSwXrF60=
 github.com/magiconair/properties v1.8.6 h1:5ibWZ6iY0NctNGWo87LalDlEZ6R41TqbbDamhfG/Qzo=
 github.com/magiconair/properties v1.8.6/go.mod h1:y3VJvCyxH9uVvJTWEGAELF3aiYNyPKd5NZ3oSwXrF60=
