@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 	"github.com/arpad-csepi/KLI/kubereflex/io"
+	banzaicloud "github.com/banzaicloud/istio-operator/api/v2/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/cli-runtime/pkg/resource"
+	"k8s.io/client-go/restmapper"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -102,6 +104,23 @@ func Apply(path string, kubeconfig *string) {
 	var clientset = setKubeClient(kubeconfig)
 	var controlPlane = io.ReadYAMLResourceFile(path)
 
+	var scheme = runtime.NewScheme()
+
+	options := runtime.
+
+	_ = banzaicloud.AddToScheme(scheme)
+
+	//config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//c, err := client.New(config, client.Options{})
+	//
+	//err = c.Create(context.TODO(), &controlPlane)
+	//if err != nil {
+	//	panic(err)
+	//}
 	groupResources, err := restmapper.GetAPIGroupResources(clientset.Discovery())
 	if err != nil {
 		panic(err)
