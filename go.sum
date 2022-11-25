@@ -73,6 +73,8 @@ github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hC
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
+github.com/arpad-csepi/kubereflex v0.0.0-20221124145344-027baeedbc2b h1:Umip62qO/itxkSL34HcO/+DFhwEjlr0TR96szI2JaNQ=
+github.com/arpad-csepi/kubereflex v0.0.0-20221124145344-027baeedbc2b/go.mod h1:XAggJYco7jFpuAnGo/jlvAQTRH+QzGGUwcrapkWyQLY=
 github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d h1:Byv0BzEl3/e6D5CLfI0j/7hiIEtvGVFPCZ7Ei2oq8iQ=
 github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/banzaicloud/istio-operator/api/v2 v2.16.0 h1:UYOi5E79Uku0Pky5M9V1P159BYe+MRmYmSkAFnfWr5o=
