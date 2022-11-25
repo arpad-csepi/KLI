@@ -108,7 +108,7 @@ func init() {
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	installCmd.Flags().StringVarP(&custom_resource_path, "custom-resource", "c", "default_resource.yaml", "Specify custom resource file location")
+	installCmd.Flags().StringVarP(&custom_resource_path, "custom-resource", "c", "", "Specify custom resource file location")
 	installCmd.Flags().BoolVarP(&verify, "verify", "v", false, "Verify the deployment is ready or not")
 	installCmd.Flags().IntVarP(&timeout, "timeout", "t", 60, "Set verify timeout in seconds")
 }

@@ -4,8 +4,10 @@ go 1.18
 
 replace github.com/golang/protobuf => github.com/luciferinlove/protobuf v0.0.0-20220913214010-c63936d75066
 
+replace sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.0.0-20221117175717-91a2c2b1a489
+
 require (
-	github.com/arpad-csepi/kubereflex v0.0.0-20221124110306-99f0d3d5f6de
+	github.com/arpad-csepi/kubereflex v0.0.0-20221124145344-027baeedbc2b
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
 	k8s.io/client-go v0.25.4
@@ -20,7 +22,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/Masterminds/squirrel v1.5.3 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
-	github.com/banzaicloud/istio-operator/api/v2 v2.15.3 // indirect
+	github.com/banzaicloud/istio-operator/api/v2 v2.16.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
@@ -131,7 +133,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	helm.sh/helm/v3 v3.10.2 // indirect
-	istio.io/api v0.0.0-20221122200323-bd9c37f95e1d // indirect
+	istio.io/api v0.0.0-20221124135806-a39e7047c3ca // indirect
 	k8s.io/api v0.25.4 // indirect
 	k8s.io/apiextensions-apiserver v0.25.4 // indirect
 	k8s.io/apimachinery v0.25.4 // indirect
@@ -139,7 +141,7 @@ require (
 	k8s.io/cli-runtime v0.25.4 // indirect
 	k8s.io/component-base v0.25.4 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20221116234839-dd070e2c4cb3 // indirect
+	k8s.io/kube-openapi v0.0.0-20221123214604-86e75ddd809a // indirect
 	k8s.io/kubectl v0.25.4 // indirect
 	k8s.io/utils v0.0.0-20221108210102-8e77b1f39fe2 // indirect
 	oras.land/oras-go v1.2.1 // indirect
