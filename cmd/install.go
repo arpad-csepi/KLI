@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/arpad-csepi/KLI/kubereflex"
 
 	"github.com/spf13/cobra"
 
@@ -14,17 +15,15 @@ import (
 	"time"
 
 	"k8s.io/client-go/util/homedir"
-
-	kubereflex "github.com/arpad-csepi/kubereflex"
 )
 
 type chartData struct {
-	chartUrl string
+	chartUrl       string
 	repositoryName string
-	chartName string
-	releaseName string
-	namespace string
-	arguments map[string]string
+	chartName      string
+	releaseName    string
+	namespace      string
+	arguments      map[string]string
 	deploymentName string
 }
 
@@ -40,21 +39,21 @@ var installCmd = &cobra.Command{
 		charts := []chartData{}
 
 		// TODO: Read helm chart data from file
-		charts = append(charts, chartData {
-			chartUrl : "https://kubernetes-charts.banzaicloud.com",
-			repositoryName : "banzaicloud-stable",
-			chartName : "istio-operator",
-			releaseName : "banzaicloud-stable",
-			namespace : "istio-system",
-			arguments : nil,
+		charts = append(charts, chartData{
+			chartUrl:       "https://kubernetes-charts.banzaicloud.com",
+			repositoryName: "banzaicloud-stable",
+			chartName:      "istio-operator",
+			releaseName:    "banzaicloud-stable",
+			namespace:      "istio-system",
+			arguments:      nil,
 		})
-		charts = append(charts, chartData {
-			chartUrl : "https://cisco-open.github.io/cluster-registry-controller",
-			repositoryName : "cluster-registry",
-			chartName : "cluster-registry",
-			releaseName : "cluster-registry",
-			namespace : "cluster-registry",
-			arguments : nil,
+		charts = append(charts, chartData{
+			chartUrl:       "https://cisco-open.github.io/cluster-registry-controller",
+			repositoryName: "cluster-registry",
+			chartName:      "cluster-registry",
+			releaseName:    "cluster-registry",
+			namespace:      "cluster-registry",
+			arguments:      nil,
 		})
 
 		// Install istio-operator and cluster-registry-controller automaticly
@@ -68,14 +67,14 @@ var installCmd = &cobra.Command{
 				chart.namespace,
 				chart.arguments,
 				kubeconfig)
-			}
+		}
 
-			charts[0].deploymentName = "banzaicloud-stable-istio-operator"
-			charts[1].deploymentName = "cluster-registry-controller"
+		charts[0].deploymentName = "banzaicloud-stable-istio-operator"
+		charts[1].deploymentName = "cluster-registry-controller"
 
 		if verify {
 			for _, chart := range charts {
-				kubereflex.Verify(chart.deploymentName, chart.namespace, kubeconfig, time.Duration(timeout) * time.Second)
+				kubereflex.Verify(chart.deploymentName, chart.namespace, kubeconfig, time.Duration(timeout)*time.Second)
 			}
 		}
 

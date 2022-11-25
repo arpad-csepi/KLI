@@ -5,9 +5,8 @@ Copyright © 2022 Árpád Csepi csepi.arpad@outlook.com
 package cmd
 
 import (
+	"github.com/arpad-csepi/KLI/kubereflex"
 	"github.com/spf13/cobra"
-
-	kubereflex "github.com/arpad-csepi/kubereflex"
 )
 
 // uninstallCmd represents the uninstall command
