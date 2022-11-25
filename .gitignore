@@ -1,1 +1,38 @@
-.vscode/launch.json
+/bin/
+/build/
+/config.*
+!config.toml.dist
+/docker-compose.override.yml
+/vendor/
+.gobincache/
+.envrc
+
+/var/*
+!/var/docker
+/var/docker/*
+!/var/docker/volumes
+/var/docker/volumes/*
+!/var/docker/volumes/.gitkeep
+!/var/log
+/var/log/*
+!/var/log/.gitkeep
+
+# IDE integration
+/.vscode/*
+!/.vscode/launch.json
+!/.vscode/tasks.json
+*.code-workspace
+/.idea/*
+
+__debug_bin
+cover.out
+
+# Please output directory and local config
+plz-out
+.plzconfig.local
+
+# kuttl keeps a kubeconfig file for the test cluster when a test fails
+/kubeconfig
+
+.DS_Store
+.*.swp
