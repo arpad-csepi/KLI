@@ -3,18 +3,21 @@ package kubectl
 import (
 	"context"
 	"fmt"
-	"github.com/arpad-csepi/KLI/kubereflex/io"
-	banzaicloud "github.com/banzaicloud/istio-operator/api/v2/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/cli-runtime/pkg/resource"
-	"k8s.io/client-go/restmapper"
 	"time"
+
+	"github.com/arpad-csepi/KLI/kubereflex/io"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/kubectl/pkg/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	istio_operator "github.com/banzaicloud/istio-operator/api/v2/v1alpha1"
 )
 
 // setKubeClient set up kubernetes clientset from the given kubeconfig and return with that
@@ -101,44 +104,41 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 }
 
 func Apply(path string, kubeconfig *string) {
-	var clientset = setKubeClient(kubeconfig)
+	// CRD object read from file
 	var controlPlane = io.ReadYAMLResourceFile(path)
 
-	var scheme = runtime.NewScheme()
-
-	options := runtime.
-
-	_ = banzaicloud.AddToScheme(scheme)
-
-	//config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//c, err := client.New(config, client.Options{})
-	//
-	//err = c.Create(context.TODO(), &controlPlane)
-	//if err != nil {
-	//	panic(err)
-	//}
-	groupResources, err := restmapper.GetAPIGroupResources(clientset.Discovery())
-	if err != nil {
-		panic(err)
-	}
-	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
-
-	// Get some metadata needed to make the REST request.
-	gvk := controlPlane.GetObjectKind().GroupVersionKind()
-	gk := schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}
-
-	mapping, err := mapper.RESTMapping(gk, gvk.Version)
+	// REST configuration for creating custom client
+	var restConfig, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
 		panic(err)
 	}
 
-	helper := resource.NewHelper(clientset.CoreV1().RESTClient(), mapping)
+	// discoverClient discover server-supported API groups, versions and resources.
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		panic(err)
+	}
 
-	_, err = helper.Create(controlPlane.Namespace, false, &controlPlane)
+	// runtimeScheme contains already registered types in the API server
+	var runtimeScheme = scheme.Scheme
+
+	// Add custom istio_operator types to the runtime scheme
+	istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
+
+	// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
+	var mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
+	
+	// restCLient is the custom client which known the custom resource types
+	restClient, err := client.New(restConfig, client.Options{Scheme: runtimeScheme, Mapper: mapper, Opts: client.WarningHandlerOptions{}})
+	if err != nil {
+		panic(err)
+	}
+
+	// Set a namespace for the client
+	var namespacedRestClient client.Client = client.NewNamespacedClient(restClient, controlPlane.Namespace)
+
+	// Create a custom resource from the CRD file
+	err = namespacedRestClient.Create(context.TODO(), &controlPlane)
 	if err != nil {
 		panic(err)
 	}
