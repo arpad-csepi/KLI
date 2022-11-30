@@ -30,6 +30,10 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 	kubectl.Verify(deploymentName, namespace, kubeconfig, timeout)
 }
 
-func Apply(path string, kubeconfig *string) {
-	kubectl.Apply(path, kubeconfig)
+func Apply(CRDpath string, kubeconfig *string) {
+	kubectl.Apply(CRDpath, kubeconfig)
+}
+
+func Delete(CRDpath string, kubeconfig *string) {
+	kubectl.Delete(CRDpath, kubeconfig)
 }

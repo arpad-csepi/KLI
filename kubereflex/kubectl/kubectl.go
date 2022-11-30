@@ -103,10 +103,7 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 	}
 }
 
-func Apply(path string, kubeconfig *string) {
-	// CRD object read from file
-	var controlPlane = io.ReadYAMLResourceFile(path)
-
+func createCustomClient(namespace string, kubeconfig *string) client.Client {
 	// REST configuration for creating custom client
 	var restConfig, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
@@ -127,7 +124,7 @@ func Apply(path string, kubeconfig *string) {
 
 	// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
 	var mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
-	
+
 	// restCLient is the custom client which known the custom resource types
 	restClient, err := client.New(restConfig, client.Options{Scheme: runtimeScheme, Mapper: mapper, Opts: client.WarningHandlerOptions{}})
 	if err != nil {
@@ -135,10 +132,32 @@ func Apply(path string, kubeconfig *string) {
 	}
 
 	// Set a namespace for the client
-	var namespacedRestClient client.Client = client.NewNamespacedClient(restClient, controlPlane.Namespace)
+	var namespacedRestClient client.Client = client.NewNamespacedClient(restClient, namespace)
+
+	return namespacedRestClient
+}
+
+func Apply(CRDpath string, kubeconfig *string) {
+	// CRD object read from file
+	CRDObject := io.ReadYAMLResourceFile(CRDpath)
+
+	restClient := createCustomClient(CRDObject.Namespace, kubeconfig)
 
 	// Create a custom resource from the CRD file
-	err = namespacedRestClient.Create(context.TODO(), &controlPlane)
+	err := restClient.Create(context.TODO(), &CRDObject)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Delete(CRDpath string, kubeconfig *string) {
+	// CRD object read from file
+	CRDObject := io.ReadYAMLResourceFile(CRDpath)
+
+	restClient := createCustomClient(CRDObject.Namespace, kubeconfig)
+
+	// Create a custom resource from the CRD file
+	err := restClient.Delete(context.TODO(), &CRDObject)
 	if err != nil {
 		panic(err)
 	}
