@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"github.com/arpad-csepi/KLI/kubereflex"
-	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
 
 	"github.com/spf13/cobra"
 
@@ -36,11 +35,11 @@ var installCmd = &cobra.Command{
 		if mainClusterConfigPath == "" {
 			mainClusterConfigPath = *getKubeConfig()
 		}
-		
-		charts := []chartData{}
+
+		var activeCharts = []chartData{}
 
 		// TODO: Read helm chart data from file
-		charts = append(charts, chartData{
+		activeCharts = append(activeCharts, chartData{
 			chartUrl:       "https://kubernetes-charts.banzaicloud.com",
 			repositoryName: "banzaicloud-stable",
 			chartName:      "istio-operator",
@@ -48,19 +47,18 @@ var installCmd = &cobra.Command{
 			namespace:      "istio-system",
 			arguments:      nil,
 		})
-		charts = append(charts, chartData{
+		activeCharts = append(activeCharts, chartData{
 			chartUrl:       "https://cisco-open.github.io/cluster-registry-controller",
 			repositoryName: "cluster-registry",
 			chartName:      "cluster-registry",
 			releaseName:    "cluster-registry",
 			namespace:      "cluster-registry",
-			arguments:      map[string]string{"localCluster.name": "demo-active", "network.name": "network1", "controller.apiServerEndpointAddress": kubectl.GetAPIServerEndpoint(&mainClusterConfigPath)},
+			arguments:      map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress="+kubereflex.GetAPIServerEndpoint(&mainClusterConfigPath)},
+
 		})
 
 		// Install istio-operator and cluster-registry-controller automaticly
-		for _, chart := range charts {
-			// TODO: Get the deployment name from InstallHelmChart and store in chart.deploymentName
-
+		for index, chart := range activeCharts {
 			kubereflex.InstallHelmChart(chart.chartUrl,
 				chart.repositoryName,
 				chart.chartName,
@@ -68,13 +66,11 @@ var installCmd = &cobra.Command{
 				chart.namespace,
 				chart.arguments,
 				&mainClusterConfigPath)
+			activeCharts[index].deploymentName = kubereflex.GetDeploymentName(chart.releaseName, chart.namespace, &mainClusterConfigPath)
 		}
 
-		charts[0].deploymentName = "banzaicloud-stable-istio-operator"
-		charts[1].deploymentName = "cluster-registry-controller"
-
 		if verify {
-			for _, chart := range charts {
+			for _, chart := range activeCharts {
 				kubereflex.Verify(chart.deploymentName, chart.namespace, &mainClusterConfigPath, time.Duration(timeout)*time.Second)
 			}
 		}
@@ -82,8 +78,39 @@ var installCmd = &cobra.Command{
 		if activeCRDPath != "" {
 			kubereflex.Apply(activeCRDPath, &mainClusterConfigPath)
 		}
-		if passiveCRDPath != "" {
-			kubereflex.Apply(passiveCRDPath, &secondaryClusterConfigPath)
+
+		if secondaryClusterConfigPath != "" {
+			var passiveCharts = []chartData{}
+
+			passiveCharts = append(activeCharts, chartData{
+				chartUrl:       "https://cisco-open.github.io/cluster-registry-controller",
+				repositoryName: "cluster-registry",
+				chartName:      "cluster-registry",
+				releaseName:    "cluster-registry",
+				namespace:      "cluster-registry",
+				arguments:      map[string]string{"set": "localCluster.name=demo-passive,network.name=network2,controller.apiServerEndpointAddress="+kubereflex.GetAPIServerEndpoint(&mainClusterConfigPath)},
+			})
+
+			for index, chart := range passiveCharts {
+				kubereflex.InstallHelmChart(chart.chartUrl,
+					chart.repositoryName,
+					chart.chartName,
+					chart.releaseName,
+					chart.namespace,
+					chart.arguments,
+					&secondaryClusterConfigPath)
+					passiveCharts[index].deploymentName = kubereflex.GetDeploymentName(chart.releaseName, chart.namespace, &secondaryClusterConfigPath)
+			}
+
+			if verify {
+				for _, chart := range passiveCharts {
+					kubereflex.Verify(chart.deploymentName, chart.namespace, &secondaryClusterConfigPath, time.Duration(timeout)*time.Second)
+				}
+			}
+
+			if passiveCRDPath != "" {
+				kubereflex.Apply(passiveCRDPath, &secondaryClusterConfigPath)
+			}
 		}
 	},
 }

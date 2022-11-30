@@ -183,8 +183,6 @@ func installChart(releaseName, repositoryName, chartName string, args map[string
 		log.Fatal(err)
 	}
 	fmt.Printf("%s is deployed\n", release.Name)
-
-	// TODO: return some information about the release for the Verify function in kubectl to find out the deployment exact name
 }
 
 func uninstallChart(releaseName string) {

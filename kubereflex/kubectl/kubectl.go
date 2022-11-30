@@ -170,6 +170,24 @@ func GetAPIServerEndpoint(kubeconfig *string) string {
 	return clientset.DiscoveryClient.RESTClient().Get().URL().String()
 }
 
+func GetDeploymentName(releaseName string, namespace string, kubeconfig *string) string {
+	clientset := setKubeClient(kubeconfig)
+	deployments, err := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: More efficient way to found out the deployment name ???
+	for _, deployment := range deployments.Items {
+		for _, value := range deployment.Annotations {
+			if value == releaseName {
+				return deployment.Name
+			}
+		}
+	}
+	panic("Deployment name not found")
+}
+
 func Attach() {
 	panic("Not implemented")
 }

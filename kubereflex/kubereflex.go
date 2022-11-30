@@ -26,12 +26,16 @@ func UninstallHelmChart(releaseName string, namespace string) {
 	helm.Uninstall(releaseName, namespace)
 }
 
+func GetDeploymentName(releaseName string, namespace string, kubeconfig *string) string {
+	return kubectl.GetDeploymentName(releaseName, namespace, kubeconfig)
+}
+
 func Verify(deploymentName string, namespace string, kubeconfig *string, timeout time.Duration) {
 	kubectl.Verify(deploymentName, namespace, kubeconfig, timeout)
 }
 
-func GetAPIServerEndpoint(kubeconfig *string) {
-	kubectl.GetAPIServerEndpoint(kubeconfig)
+func GetAPIServerEndpoint(kubeconfig *string) string {
+	return kubectl.GetAPIServerEndpoint(kubeconfig)
 }
 
 func Apply(CRDpath string, kubeconfig *string) {
