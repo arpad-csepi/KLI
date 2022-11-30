@@ -22,6 +22,15 @@ to quickly create a Cobra application.`,
 		// Uninstall istio-operator and cluster-registry-controller automaticly
 		kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system")
 		kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry")
+
+		if activeCRDPath != "" {
+			// TODO: Call kubereflex Delete function for delete the custom resource
+			panic("Not implemented")
+		}
+		if passiveCRDPath != "" {
+			// TODO: Call kubereflex Delete function for delete the custom resource
+			panic("Not implemented")
+		}
 	},
 }
 
@@ -37,5 +46,7 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	uninstallCmd.Flags().StringVarP(&customResourcePath, "custom_resource_path", "c", "", "Specify custom resource file location")
+
+	uninstallCmd.Flags().StringVarP(&activeCRDPath, "active-custom-resource", "a", "", "Specify custom resource file location for the active cluster")
+	uninstallCmd.Flags().StringVarP(&passiveCRDPath, "passive-custom-resource", "p", "", "Specify custom resource file location for the passive cluster")
 }

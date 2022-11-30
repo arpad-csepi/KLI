@@ -4,8 +4,6 @@ Copyright © 2022 Árpád Csepi csepi.arpad@outlook.com
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/arpad-csepi/KLI/kubereflex"
 
 	"github.com/spf13/cobra"
@@ -80,22 +78,23 @@ var installCmd = &cobra.Command{
 			}
 		}
 
-		custom_resource_path, err := cmd.Flags().GetString("custom-resource")
-		if err != nil {
-			fmt.Printf("Custom resource error: %s", err.Error())
+		if activeCRDPath != "" {
+			kubereflex.Apply(activeCRDPath, &mainClusterConfigPath)
 		}
-		if custom_resource_path != "" {
-			kubereflex.Apply(custom_resource_path, &mainClusterConfigPath)
+		if passiveCRDPath != "" {
+			kubereflex.Apply(passiveCRDPath, &secondaryClusterConfigPath)
 		}
 	},
 }
 
-var customResourcePath string
 var verify bool
 var timeout int
 
 var mainClusterConfigPath string
 var secondaryClusterConfigPath string
+
+var activeCRDPath string
+var passiveCRDPath string
 
 func init() {
 	rootCmd.AddCommand(installCmd)
@@ -112,7 +111,8 @@ func init() {
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	installCmd.Flags().StringVarP(&customResourcePath, "custom-resource", "c", "", "Specify custom resource file location")
+	installCmd.Flags().StringVarP(&activeCRDPath, "active-custom-resource", "a", "", "Specify custom resource file location for the active cluster")
+	installCmd.Flags().StringVarP(&passiveCRDPath, "passive-custom-resource", "p", "", "Specify custom resource file location for the passive cluster")
 	installCmd.Flags().BoolVarP(&verify, "verify", "v", false, "Verify the deployment is ready or not")
 	installCmd.Flags().IntVarP(&timeout, "timeout", "t", 60, "Set verify timeout in seconds")
 	installCmd.Flags().StringVarP(&mainClusterConfigPath, "main-cluster", "m", "", "Main cluster kubeconfig file location")
