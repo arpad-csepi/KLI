@@ -1,11 +1,11 @@
 /*
 Copyright © 2022 Árpád Csepi csepi.arpad@outlook.com
-
 */
 package cmd
 
 import (
 	"fmt"
+
 	"github.com/arpad-csepi/KLI/kubereflex"
 
 	"github.com/spf13/cobra"
@@ -34,7 +34,9 @@ var installCmd = &cobra.Command{
 	Short: "Install istio-operator and cluster-registry-controller",
 	Long:  `TODO`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var kubeconfig = getKubeConfig()
+		if mainClusterConfigPath == "" {
+			mainClusterConfigPath = *getKubeConfig()
+		}
 
 		charts := []chartData{}
 
@@ -66,7 +68,7 @@ var installCmd = &cobra.Command{
 				chart.releaseName,
 				chart.namespace,
 				chart.arguments,
-				kubeconfig)
+				&mainClusterConfigPath)
 		}
 
 		charts[0].deploymentName = "banzaicloud-stable-istio-operator"
@@ -74,7 +76,7 @@ var installCmd = &cobra.Command{
 
 		if verify {
 			for _, chart := range charts {
-				kubereflex.Verify(chart.deploymentName, chart.namespace, kubeconfig, time.Duration(timeout)*time.Second)
+				kubereflex.Verify(chart.deploymentName, chart.namespace, &mainClusterConfigPath, time.Duration(timeout)*time.Second)
 			}
 		}
 
@@ -83,14 +85,17 @@ var installCmd = &cobra.Command{
 			fmt.Printf("Custom resource error: %s", err.Error())
 		}
 		if custom_resource_path != "" {
-			kubereflex.Apply(custom_resource_path, kubeconfig)
+			kubereflex.Apply(custom_resource_path, &mainClusterConfigPath)
 		}
 	},
 }
 
-var custom_resource_path string
+var customResourcePath string
 var verify bool
 var timeout int
+
+var mainClusterConfigPath string
+var secondaryClusterConfigPath string
 
 func init() {
 	rootCmd.AddCommand(installCmd)
@@ -107,9 +112,11 @@ func init() {
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	installCmd.Flags().StringVarP(&custom_resource_path, "custom-resource", "c", "", "Specify custom resource file location")
+	installCmd.Flags().StringVarP(&customResourcePath, "custom-resource", "c", "", "Specify custom resource file location")
 	installCmd.Flags().BoolVarP(&verify, "verify", "v", false, "Verify the deployment is ready or not")
 	installCmd.Flags().IntVarP(&timeout, "timeout", "t", 60, "Set verify timeout in seconds")
+	installCmd.Flags().StringVarP(&mainClusterConfigPath, "main-cluster", "m", "", "Main cluster kubeconfig file location")
+	installCmd.Flags().StringVarP(&secondaryClusterConfigPath, "secondary-cluster", "s", "", "Secondary cluster kubeconfig file location")
 }
 
 func getKubeConfig() *string {

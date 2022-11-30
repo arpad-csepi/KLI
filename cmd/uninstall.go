@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 Árpád Csepi csepi.arpad@outlook.com
-
 */
 package cmd
 
@@ -38,5 +37,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	uninstallCmd.Flags().StringVarP(&custom_resource_path, "custom_resource_path", "c", "", "Specify custom resource file location")
+	uninstallCmd.Flags().StringVarP(&customResourcePath, "custom_resource_path", "c", "", "Specify custom resource file location")
 }
