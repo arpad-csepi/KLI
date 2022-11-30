@@ -24,12 +24,10 @@ to quickly create a Cobra application.`,
 		kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry")
 
 		if activeCRDPath != "" {
-			// TODO: Call kubereflex Delete function for delete the custom resource
-			panic("Not implemented")
+			kubereflex.Delete(activeCRDPath, &mainClusterConfigPath)
 		}
 		if passiveCRDPath != "" {
-			// TODO: Call kubereflex Delete function for delete the custom resource
-			panic("Not implemented")
+			kubereflex.Delete(passiveCRDPath, &secondaryClusterConfigPath)
 		}
 	},
 }
