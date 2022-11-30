@@ -164,3 +164,16 @@ func Delete(CRDpath string, kubeconfig *string) {
 
 	fmt.Printf("Hooray, %s successfuly deleted\n", CRDObject.Name)
 }
+
+func GetAPIServerEndpoint(kubeconfig *string) string {
+	clientset := setKubeClient(kubeconfig)
+	return clientset.DiscoveryClient.RESTClient().Get().URL().String()
+}
+
+func Attach() {
+	panic("Not implemented")
+}
+
+func Detach() {
+	panic("Not implemented")
+}

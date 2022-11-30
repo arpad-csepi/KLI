@@ -30,6 +30,10 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 	kubectl.Verify(deploymentName, namespace, kubeconfig, timeout)
 }
 
+func GetAPIServerEndpoint(kubeconfig *string) {
+	kubectl.GetAPIServerEndpoint(kubeconfig)
+}
+
 func Apply(CRDpath string, kubeconfig *string) {
 	kubectl.Apply(CRDpath, kubeconfig)
 }

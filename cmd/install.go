@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"github.com/arpad-csepi/KLI/kubereflex"
+	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
 
 	"github.com/spf13/cobra"
 
@@ -35,7 +36,7 @@ var installCmd = &cobra.Command{
 		if mainClusterConfigPath == "" {
 			mainClusterConfigPath = *getKubeConfig()
 		}
-
+		
 		charts := []chartData{}
 
 		// TODO: Read helm chart data from file
@@ -53,7 +54,7 @@ var installCmd = &cobra.Command{
 			chartName:      "cluster-registry",
 			releaseName:    "cluster-registry",
 			namespace:      "cluster-registry",
-			arguments:      nil,
+			arguments:      map[string]string{"localCluster.name": "demo-active", "network.name": "network1", "controller.apiServerEndpointAddress": kubectl.GetAPIServerEndpoint(&mainClusterConfigPath)},
 		})
 
 		// Install istio-operator and cluster-registry-controller automaticly
