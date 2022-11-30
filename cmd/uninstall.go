@@ -23,6 +23,10 @@ to quickly create a Cobra application.`,
 		kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system")
 		kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry")
 
+		if mainClusterConfigPath == "" {
+			mainClusterConfigPath = *getKubeConfig()
+		}
+
 		if activeCRDPath != "" {
 			kubereflex.Delete(activeCRDPath, &mainClusterConfigPath)
 		}
@@ -47,4 +51,7 @@ func init() {
 
 	uninstallCmd.Flags().StringVarP(&activeCRDPath, "active-custom-resource", "a", "", "Specify custom resource file location for the active cluster")
 	uninstallCmd.Flags().StringVarP(&passiveCRDPath, "passive-custom-resource", "p", "", "Specify custom resource file location for the passive cluster")
+
+	uninstallCmd.Flags().StringVarP(&mainClusterConfigPath, "main-cluster", "m", "", "Main cluster kubeconfig file location")
+	uninstallCmd.Flags().StringVarP(&secondaryClusterConfigPath, "secondary-cluster", "s", "", "Secondary cluster kubeconfig file location")
 }

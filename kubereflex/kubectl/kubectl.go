@@ -157,8 +157,10 @@ func Delete(CRDpath string, kubeconfig *string) {
 	restClient := createCustomClient(CRDObject.Namespace, kubeconfig)
 
 	// Create a custom resource from the CRD file
-	err := restClient.Delete(context.TODO(), &CRDObject)
+	err := restClient.DeleteAllOf(context.TODO(), &CRDObject)
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Printf("Hooray, %s successfuly deleted\n", CRDObject.Name)
 }
