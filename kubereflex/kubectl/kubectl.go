@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	istio_operator "github.com/banzaicloud/istio-operator/api/v2/v1alpha1"
+	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
 )
 
 // setKubeClient set up kubernetes clientset from the given kubeconfig and return with that
@@ -32,6 +33,41 @@ func setKubeClient(kubeconfig *string) *kubernetes.Clientset {
 	}
 
 	return clientset
+}
+
+func createCustomClient(namespace string, kubeconfig *string) client.Client {
+	// REST configuration for creating custom client
+	var restConfig, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+
+	// discoverClient discover server-supported API groups, versions and resources.
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	// runtimeScheme contains already registered types in the API server
+	var runtimeScheme = scheme.Scheme
+
+	// Add custom types to the runtime scheme
+	istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
+	cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
+
+	// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
+	var mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
+
+	// restCLient is the custom client which known the custom resource types
+	restClient, err := client.New(restConfig, client.Options{Scheme: runtimeScheme, Mapper: mapper, Opts: client.WarningHandlerOptions{}})
+	if err != nil {
+		panic(err)
+	}
+
+	// Set a namespace for the client
+	var namespacedRestClient client.Client = client.NewNamespacedClient(restClient, namespace)
+
+	return namespacedRestClient
 }
 
 // TODO: Deprecated due to helm can create namespace before install
@@ -103,66 +139,30 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 	}
 }
 
-func createCustomClient(namespace string, kubeconfig *string) client.Client {
-	// REST configuration for creating custom client
-	var restConfig, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	if err != nil {
-		panic(err)
-	}
+func Apply(CRDPath string, kubeconfig *string) {
+	CRD := io.ReadYAMLResourceFile(CRDPath)
 
-	// discoverClient discover server-supported API groups, versions and resources.
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
-	if err != nil {
-		panic(err)
-	}
-
-	// runtimeScheme contains already registered types in the API server
-	var runtimeScheme = scheme.Scheme
-
-	// Add custom istio_operator types to the runtime scheme
-	istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
-
-	// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
-	var mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
-
-	// restCLient is the custom client which known the custom resource types
-	restClient, err := client.New(restConfig, client.Options{Scheme: runtimeScheme, Mapper: mapper, Opts: client.WarningHandlerOptions{}})
-	if err != nil {
-		panic(err)
-	}
-
-	// Set a namespace for the client
-	var namespacedRestClient client.Client = client.NewNamespacedClient(restClient, namespace)
-
-	return namespacedRestClient
-}
-
-func Apply(CRDpath string, kubeconfig *string) {
-	// CRD object read from file
-	CRDObject := io.ReadYAMLResourceFile(CRDpath)
-
-	restClient := createCustomClient(CRDObject.Namespace, kubeconfig)
+	restClient := createCustomClient(CRD.GetNamespace(), kubeconfig)
 
 	// Create a custom resource from the CRD file
-	err := restClient.Create(context.TODO(), &CRDObject)
+	err := restClient.Create(context.TODO(), CRD)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
+	fmt.Printf("Yep, %s is created\n", CRD.GetName())
 }
 
-func Delete(CRDpath string, kubeconfig *string) {
+func Remove(CRDpath string, kubeconfig *string) {
 	// CRD object read from file
-	CRDObject := io.ReadYAMLResourceFile(CRDpath)
+	CRD := io.ReadYAMLResourceFile(CRDpath)
 
-	restClient := createCustomClient(CRDObject.Namespace, kubeconfig)
+	restClient := createCustomClient(CRD.GetNamespace(), kubeconfig)
 
 	// Create a custom resource from the CRD file
-	err := restClient.DeleteAllOf(context.TODO(), &CRDObject)
+	err := restClient.DeleteAllOf(context.TODO(), CRD)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
-
-	fmt.Printf("Hooray, %s successfuly deleted\n", CRDObject.Name)
 }
 
 func GetAPIServerEndpoint(kubeconfig *string) string {
@@ -188,10 +188,83 @@ func GetDeploymentName(releaseName string, namespace string, kubeconfig *string)
 	panic("Deployment name not found")
 }
 
-func Attach() {
-	panic("Not implemented")
+func create(restClient client.Client, obj client.Object) {
+	err := restClient.Create(context.TODO(), obj)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func Detach() {
-	panic("Not implemented")
+func delete(restClient client.Client, obj client.Object) {
+	err := restClient.DeleteAllOf(context.TODO(), obj)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func Attach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) {
+	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
+	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
+
+	restClient1 := createCustomClient(namespace1, kubeconfig1)
+	secret1, cluster1 := getClusterInfo(restClient1, objectKey1)
+
+	restClient2 := createCustomClient(namespace2, kubeconfig2)
+	secret2, cluster2 := getClusterInfo(restClient2, objectKey2)
+
+	create(restClient1, &secret2)
+	create(restClient1, &cluster2)
+
+	create(restClient2, &secret1)
+	create(restClient2, &cluster1)
+}
+
+func getClusterInfo(restClient client.Client, objectKey client.ObjectKey) (corev1.Secret, cluster_registry.Cluster) {
+	var secret corev1.Secret
+	var cluster cluster_registry.Cluster
+
+	// BUG: Without sleep panic with secret not found error
+	fmt.Println("Wait for 3 seconds")
+	time.Sleep(3 * time.Second)
+
+	err := restClient.Get(context.TODO(), objectKey, &secret)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Wait for 3 seconds")
+	time.Sleep(3 * time.Second)
+
+	err = restClient.Get(context.TODO(), objectKey, &cluster)
+	if err != nil {
+		panic(err)
+	}
+
+	secret.ResourceVersion = ""
+	cluster.ResourceVersion = ""
+
+	return secret, cluster
+}
+
+func Detach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) {
+	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
+	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
+
+	restClient1 := createCustomClient(namespace1, kubeconfig1)
+	secretActive1, clusterActive1 := getClusterInfo(restClient1, objectKey1)
+	secretActive2, clusterActive2 := getClusterInfo(restClient1, objectKey2)
+
+	restClient2 := createCustomClient(namespace2, kubeconfig2)
+	secretPassive1, clusterPassive1 := getClusterInfo(restClient2, objectKey1)
+	secretPassive2, clusterPassive2 := getClusterInfo(restClient2, objectKey2)
+
+	delete(restClient1, &secretActive1)
+	delete(restClient1, &secretActive2)
+	delete(restClient1, &clusterActive1)
+	delete(restClient1, &clusterActive2)
+
+	delete(restClient2, &secretPassive1)
+	delete(restClient2, &secretPassive2)
+	delete(restClient2, &clusterPassive1)
+	delete(restClient2, &clusterPassive2)
 }

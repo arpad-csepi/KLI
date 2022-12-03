@@ -1,9 +1,10 @@
 package kubereflex
 
 import (
+	"time"
+
 	"github.com/arpad-csepi/KLI/kubereflex/helm"
 	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
-	"time"
 )
 
 // TODO: Optional parameters like args, namespace (maybe in KLI pass nil parameter to here)
@@ -17,13 +18,13 @@ func InstallHelmChart(chartUrl string, repositoryName string, chartName string, 
 		helm.RepositoryAdd(repositoryName, chartUrl)
 	}
 
-	helm.Install(repositoryName, chartName, releaseName, namespace, args)
+	helm.Install(repositoryName, chartName, releaseName, namespace, args, kubeconfig)
 }
 
-func UninstallHelmChart(releaseName string, namespace string) {
+func UninstallHelmChart(releaseName string, namespace string, kubeconfig *string) {
 	// TODO: Some check before run Uninstall
 
-	helm.Uninstall(releaseName, namespace)
+	helm.Uninstall(releaseName, namespace, kubeconfig)
 }
 
 func GetDeploymentName(releaseName string, namespace string, kubeconfig *string) string {
@@ -42,6 +43,14 @@ func Apply(CRDpath string, kubeconfig *string) {
 	kubectl.Apply(CRDpath, kubeconfig)
 }
 
-func Delete(CRDpath string, kubeconfig *string) {
-	kubectl.Delete(CRDpath, kubeconfig)
+func Remove(CRDpath string, kubeconfig *string) {
+	kubectl.Remove(CRDpath, kubeconfig)
+}
+
+func Attach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) {
+	kubectl.Attach(kubeconfig1, kubeconfig2, namespace1, namespace2)
+}
+
+func Detach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) {
+	kubectl.Detach(kubeconfig1, kubeconfig2, namespace1, namespace2)
 }

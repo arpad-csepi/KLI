@@ -19,22 +19,34 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Uninstall istio-operator and cluster-registry-controller automaticly
-		kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system")
-		kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry")
-
 		if mainClusterConfigPath == "" {
 			mainClusterConfigPath = *getKubeConfig()
 		}
 
-		if activeCRDPath != "" {
-			kubereflex.Delete(activeCRDPath, &mainClusterConfigPath)
+		if detach {
+			kubereflex.Detach(&mainClusterConfigPath, &secondaryClusterConfigPath, "cluster-registry", "cluster-registry")
 		}
-		if passiveCRDPath != "" {
-			kubereflex.Delete(passiveCRDPath, &secondaryClusterConfigPath)
+
+		if activeCRDPath != "" {
+			kubereflex.Remove(activeCRDPath, &mainClusterConfigPath)
+		}
+
+		// Uninstall istio-operator and cluster-registry-controller automaticly
+		kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system", &mainClusterConfigPath)
+		kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry", &mainClusterConfigPath)
+
+		if secondaryClusterConfigPath != "" {
+			if passiveCRDPath != "" {
+				kubereflex.Remove(passiveCRDPath, &secondaryClusterConfigPath)
+			}
+
+			kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system", &secondaryClusterConfigPath)
+			kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry", &secondaryClusterConfigPath)
 		}
 	},
 }
+
+var detach bool
 
 func init() {
 	rootCmd.AddCommand(uninstallCmd)
@@ -49,9 +61,11 @@ func init() {
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	uninstallCmd.Flags().StringVarP(&activeCRDPath, "active-custom-resource", "a", "", "Specify custom resource file location for the active cluster")
-	uninstallCmd.Flags().StringVarP(&passiveCRDPath, "passive-custom-resource", "p", "", "Specify custom resource file location for the passive cluster")
+	uninstallCmd.Flags().StringVarP(&activeCRDPath, "active-custom-resource", "r", "", "Specify custom resource file location for the active cluster")
+	uninstallCmd.Flags().StringVarP(&passiveCRDPath, "passive-custom-resource", "R", "", "Specify custom resource file location for the passive cluster")
 
-	uninstallCmd.Flags().StringVarP(&mainClusterConfigPath, "main-cluster", "m", "", "Main cluster kubeconfig file location")
-	uninstallCmd.Flags().StringVarP(&secondaryClusterConfigPath, "secondary-cluster", "s", "", "Secondary cluster kubeconfig file location")
+	uninstallCmd.Flags().StringVarP(&mainClusterConfigPath, "main-cluster", "c", "", "Main cluster kubeconfig file location")
+	uninstallCmd.Flags().StringVarP(&secondaryClusterConfigPath, "secondary-cluster", "C", "", "Secondary cluster kubeconfig file location")
+
+	uninstallCmd.Flags().BoolVarP(&detach, "detach", "d", false, "Remove cluster connections")
 }

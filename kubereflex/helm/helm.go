@@ -27,16 +27,18 @@ import (
 var settings *cli.EnvSettings = cli.New()
 
 // Install perform repository updates and install the chart which is specified
-func Install(repositoryName string, chartName string, releaseName string, namespace string, args map[string]string) {
+func Install(repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string) {
 	os.Setenv("HELM_NAMESPACE", namespace)
 	settings.SetNamespace(namespace)
+	settings.KubeConfig = *kubeconfig
 	RepositoryUpdate()
 	installChart(releaseName, repositoryName, chartName, args)
 }
 
-func Uninstall(releaseName string, namespace string) {
+func Uninstall(releaseName string, namespace string, kubeconfig *string) {
 	os.Setenv("HELM_NAMESPACE", namespace)
 	settings.SetNamespace(namespace)
+	settings.KubeConfig = *kubeconfig
 	uninstallChart(releaseName)
 }
 
@@ -196,9 +198,10 @@ func uninstallChart(releaseName string) {
 
 	release, err := client.Run(releaseName)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("%s\n", err)
+	} else {
+		fmt.Println(release.Info)		
 	}
-	fmt.Println(release.Info)
 }
 
 // isChartInstallable check chart type is installable
