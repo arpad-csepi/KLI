@@ -222,22 +222,29 @@ func Attach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespa
 func getClusterInfo(restClient client.Client, objectKey client.ObjectKey) (corev1.Secret, cluster_registry.Cluster) {
 	var secret corev1.Secret
 	var cluster cluster_registry.Cluster
+	var errSecret error
+	var errCluster error
 
-	// BUG: Without sleep panic with secret not found error
-	fmt.Println("Wait for 3 seconds")
-	time.Sleep(3 * time.Second)
+	// 50 * 100ms = 5sec
+	var timeout = 50
 
-	err := restClient.Get(context.TODO(), objectKey, &secret)
-	if err != nil {
-		panic(err)
-	}
+	for {
+		if secret.CreationTimestamp.IsZero() {
+			errSecret = restClient.Get(context.TODO(), objectKey, &secret)
+		}
 
-	fmt.Println("Wait for 3 seconds")
-	time.Sleep(3 * time.Second)
+		if cluster.CreationTimestamp.IsZero() {
+			errCluster = restClient.Get(context.TODO(), objectKey, &cluster)
+		}
 
-	err = restClient.Get(context.TODO(), objectKey, &cluster)
-	if err != nil {
-		panic(err)
+		if errSecret == nil && errCluster == nil {
+			break
+		} else if timeout == 0 {
+			err := fmt.Sprintf("Secret resource error: %s\nCluster resource error: %s", errSecret.Error(), errCluster.Error())
+			panic(err)
+		}
+		time.Sleep(100 * time.Millisecond)
+		timeout--
 	}
 
 	secret.ResourceVersion = ""
