@@ -75,8 +75,6 @@ func createCustomClient(namespace string, kubeconfig *string) client.Client {
 func CreateNamespace(namespace string, kubeconfig *string) {
 	var clientset = setKubeClient(kubeconfig)
 
-	//TODO: Check if setKubeClient failed
-
 	nsName := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,

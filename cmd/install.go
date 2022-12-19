@@ -155,8 +155,6 @@ func init() {
 
 	// Here you will define your flags and configuration settings.
 
-	//TODO: Maybe seperate kubernetes pod install and helm chart install here later
-
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// installCmd.PersistentFlags().String("foo", "", "A help for foo")

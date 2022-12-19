@@ -194,8 +194,6 @@ func uninstallChart(releaseName string) {
 	}
 	client := action.NewUninstall(actionConfig)
 
-	// TODO: Some check before run uninstall
-
 	release, err := client.Run(releaseName)
 	if err != nil {
 		fmt.Printf("%s\n", err)
