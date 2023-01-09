@@ -26,25 +26,27 @@ import (
 
 var settings *cli.EnvSettings = cli.New()
 
-// Install perform repository updates and install the chart which is specified
-func Install(repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string) {
+func setSettings(namespace string, kubeconfig *string) {
 	os.Setenv("HELM_NAMESPACE", namespace)
 	settings.SetNamespace(namespace)
 	settings.KubeConfig = *kubeconfig
+}
+
+// Install set helm settings up, perform repository updates and install the chart which is specified
+func Install(repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string) {
+	setSettings(namespace, kubeconfig)
 	RepositoryUpdate()
 	installChart(releaseName, repositoryName, chartName, args)
 }
 
+// Uninstall set helm settings up and uninstall the chart which is specified
 func Uninstall(releaseName string, namespace string, kubeconfig *string) {
-	os.Setenv("HELM_NAMESPACE", namespace)
-	settings.SetNamespace(namespace)
-	settings.KubeConfig = *kubeconfig
+	setSettings(namespace, kubeconfig)
 	uninstallChart(releaseName)
 }
 
 // IsRepositoryExists check if given repositoryName already exists in repo.File
 func IsRepositoryExists(repositoryName string) bool {
-
 	var repoFile = readRepositoryFile(settings.RepositoryConfig)
 
 	if repoFile.Has(repositoryName) {
@@ -95,7 +97,7 @@ func RepositoryUpdate() {
 		repos = append(repos, repository)
 	}
 
-	fmt.Printf("Hang tight while we grab the latest from your chart repositories...\n")
+	fmt.Println("Hang tight while we grab the latest from your chart repositories...")
 	var wg sync.WaitGroup
 	for _, repository := range repos {
 		wg.Add(1)
@@ -109,11 +111,12 @@ func RepositoryUpdate() {
 		}(repository)
 	}
 	wg.Wait()
-	fmt.Printf("Alright! Update Complete. ⎈ Happy Helming! ⎈\n")
+	fmt.Println("Alright! Update Complete. ⎈ Happy Helming! ⎈")
 }
 
 // installChart perform a chart install
 func installChart(releaseName, repositoryName, chartName string, args map[string]string) {
+	fmt.Printf("Install %s chart from %s repository...\n", chartName, repositoryName)
 	actionConfig := new(action.Configuration)
 	if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER"), debug); err != nil {
 		log.Fatal(err)
@@ -123,14 +126,12 @@ func installChart(releaseName, repositoryName, chartName string, args map[string
 	if client.Version == "" && client.Devel {
 		client.Version = ">0.0.0-0"
 	}
-	//name, chart, err := client.NameAndChart(args)
+
 	client.ReleaseName = releaseName
 	chartPath, err := client.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", repositoryName, chartName), settings)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	debug("CHART PATH: %s\n", chartPath)
 
 	getter.All(settings)
 
@@ -141,12 +142,10 @@ func installChart(releaseName, repositoryName, chartName string, args map[string
 		log.Fatal(err)
 	}
 
-	// Add args
 	if err := strvals.ParseInto(args["set"], vals); err != nil {
 		log.Fatal(errors.Wrap(err, "Nah, failed parsing --set data\n"))
 	}
 
-	// Check chart dependencies to make sure all are present in /charts
 	chartRequested, err := loader.Load(chartPath)
 	if err != nil {
 		log.Fatal(err)
@@ -187,7 +186,9 @@ func installChart(releaseName, repositoryName, chartName string, args map[string
 	fmt.Printf("%s is deployed\n", release.Name)
 }
 
+// uninstallChart perform a chart uninstall
 func uninstallChart(releaseName string) {
+	fmt.Printf("Uninstall %s chart\n", releaseName)
 	actionConfig := new(action.Configuration)
 	if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER"), debug); err != nil {
 		log.Fatal(err)
@@ -198,7 +199,7 @@ func uninstallChart(releaseName string) {
 	if err != nil {
 		fmt.Printf("%s\n", err)
 	} else {
-		fmt.Println(release.Info)		
+		fmt.Printf("%s is uninstalled\n", release.Release.Name)		
 	}
 }
 
@@ -214,13 +215,11 @@ func isChartInstallable(chart *chart.Chart) (bool, error) {
 
 // readRepositoryFile read repository file and return with that
 func readRepositoryFile(repositoryFile string) repo.File {
-	//Ensure the file directory exists as it is required for file locking
 	err := os.MkdirAll(filepath.Dir(repositoryFile), os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		log.Fatal(err)
 	}
 
-	// Acquire a file lock for process synchronization
 	fileLock := flock.New(strings.Replace(repositoryFile, filepath.Ext(repositoryFile), ".lock", 1))
 	lockCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -245,8 +244,8 @@ func readRepositoryFile(repositoryFile string) repo.File {
 	return repoFile
 }
 
-// debug is helpful for debug problems
 func debug(format string, v ...interface{}) {
-	format = fmt.Sprintf("[debug] %s\n", format)
-	log.Output(2, fmt.Sprintf(format, v...))
+	// TODO: Output only in debug mode
+	// format = fmt.Sprintf("[debug] %s\n", format)
+	// log.Output(2, fmt.Sprintf(format, v...))
 }

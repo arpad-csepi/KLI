@@ -7,8 +7,6 @@ import (
 	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
 )
 
-// TODO: Optional parameters like args, namespace (maybe in KLI pass nil parameter to here)
-// TODO: Default value to namespace (maybe define defaults in KLI call this function)
 func InstallHelmChart(chartUrl string, repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string) {
 	if !kubectl.IsNamespaceExists(namespace, kubeconfig) {
 		kubectl.CreateNamespace(namespace, kubeconfig)
@@ -26,7 +24,11 @@ func UninstallHelmChart(releaseName string, namespace string, kubeconfig *string
 }
 
 func GetDeploymentName(releaseName string, namespace string, kubeconfig *string) string {
-	return kubectl.GetDeploymentName(releaseName, namespace, kubeconfig)
+	deploymentName, err := kubectl.GetDeploymentName(releaseName, namespace, kubeconfig)
+	if err == nil {
+		return deploymentName
+	}
+	panic(err.Error())
 }
 
 func Verify(deploymentName string, namespace string, kubeconfig *string, timeout time.Duration) {

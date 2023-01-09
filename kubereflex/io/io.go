@@ -21,7 +21,6 @@ func fileRead(path string) []byte {
 func ReadYAMLResourceFile(path string) client.Object {
 	var data = fileRead(path)
 
-	// TODO: Make more generic
 	var icp istio_operator.IstioControlPlane
 	err := yaml.Unmarshal(data, &icp)
 
@@ -29,14 +28,4 @@ func ReadYAMLResourceFile(path string) client.Object {
 		panic(err)
 	}
 	return icp.DeepCopy()
-}
-
-// func getKindFromFile(data []byte) string {
-// 	content := string(data[:])
-
-// 	panic(content)
-// }
-
-func ReadYAMLChartsFile(path string) {
-	// TODO: Read chars from file in install command
 }

@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -21,6 +22,14 @@ import (
 	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
 )
 
+type clusterInfo struct {
+	restClient client.Client
+	secret     corev1.Secret
+	cluster    cluster_registry.Cluster
+	errSecret  error
+	errCluster error
+}
+
 // setKubeClient set up kubernetes clientset from the given kubeconfig and return with that
 func setKubeClient(kubeconfig *string) *kubernetes.Clientset {
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
@@ -35,6 +44,7 @@ func setKubeClient(kubeconfig *string) *kubernetes.Clientset {
 	return clientset
 }
 
+// createCustomClient set up kubernetes REST client which scheme contains custom kubernetes types from banzaicloud and cisco-open
 func createCustomClient(namespace string, kubeconfig *string) client.Client {
 	// REST configuration for creating custom client
 	var restConfig, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
@@ -58,13 +68,12 @@ func createCustomClient(namespace string, kubeconfig *string) client.Client {
 	// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
 	var mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
 
-	// restCLient is the custom client which known the custom resource types
+	// restClient is the custom client which known the custom resource types
 	restClient, err := client.New(restConfig, client.Options{Scheme: runtimeScheme, Mapper: mapper, Opts: client.WarningHandlerOptions{}})
 	if err != nil {
 		panic(err)
 	}
 
-	// Set a namespace for the client
 	var namespacedRestClient client.Client = client.NewNamespacedClient(restClient, namespace)
 
 	return namespacedRestClient
@@ -103,10 +112,8 @@ func IsNamespaceExists(namespace string, kubeconfig *string) bool {
 }
 
 // Verify check release status until the given time
-// TODO: Make this asynchronous so other resources can be installed while verify is running (if not dependent one resource on another)
 func Verify(deploymentName string, namespace string, kubeconfig *string, timeout time.Duration) {
 	var clientset = setKubeClient(kubeconfig)
-	// TODO: Make timeout check event based for more efficiency
 	var animation = [7]string{"_", "-", "`", "'", "´", "-", "_"}
 	var frame = 0
 
@@ -121,14 +128,11 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 			break
 		}
 		if time.Since(start) > timeout {
-			// TODO: List the resources which cause the timeout
 			fmt.Println("\nAww. One or more resource is not ready! Please check your cluster to more info.")
 			break
 		}
 		time.Sleep(150 * time.Millisecond)
-		fmt.Print("\033[G") // Move cursor to line begining
-
-		// TODO: Fix this if-else with 1 line formula later
+		fmt.Print("\033[G")
 		if frame == 6 {
 			frame = 0
 		} else {
@@ -137,55 +141,62 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 	}
 }
 
+// Apply is read the custom resource definition and apply it with custom REST client
 func Apply(CRDPath string, kubeconfig *string) {
+	fmt.Printf("Apply %s resource file\n", CRDPath)
 	CRD := io.ReadYAMLResourceFile(CRDPath)
-
 	restClient := createCustomClient(CRD.GetNamespace(), kubeconfig)
 
-	// Create a custom resource from the CRD file
 	err := restClient.Create(context.TODO(), CRD)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Printf("Yep, %s is created\n", CRD.GetName())
+	fmt.Printf("Yep, %s resource applied\n", CRD.GetName())
 }
 
-func Remove(CRDpath string, kubeconfig *string) {
-	// CRD object read from file
+// Remove is read the custom resource definition and remove it with custom REST client
+func Remove(CRDpath string, kubeconfig *string) error {
+	fmt.Printf("Remove resource based on %s\n", CRDpath)
 	CRD := io.ReadYAMLResourceFile(CRDpath)
-
 	restClient := createCustomClient(CRD.GetNamespace(), kubeconfig)
 
-	// Create a custom resource from the CRD file
 	err := restClient.DeleteAllOf(context.TODO(), CRD)
 	if err != nil {
-		fmt.Println(err)
+		return (err)
 	}
+
+	fmt.Println("Resource deleted!")
+	return nil
 }
 
+// GetAPIServerEndpoint is return with the API endpoint URL address
 func GetAPIServerEndpoint(kubeconfig *string) string {
 	clientset := setKubeClient(kubeconfig)
 	return clientset.DiscoveryClient.RESTClient().Get().URL().String()
 }
 
-func GetDeploymentName(releaseName string, namespace string, kubeconfig *string) string {
+// GetDeploymentName is search the deployment name based on the chart release name
+func GetDeploymentName(releaseName string, namespace string, kubeconfig *string) (string, error) {
 	clientset := setKubeClient(kubeconfig)
 	deployments, err := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
+
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
-	// TODO: More efficient way to found out the deployment name ???
 	for _, deployment := range deployments.Items {
 		for _, value := range deployment.Annotations {
 			if value == releaseName {
-				return deployment.Name
+				return deployment.Name, nil
 			}
 		}
 	}
-	panic("Deployment name not found")
+
+	err = errors.New("deployment not found")
+	return "", err
 }
 
+// create is create an object in the cluster with the given REST client
 func create(restClient client.Client, obj client.Object) {
 	err := restClient.Create(context.TODO(), obj)
 	if err != nil {
@@ -193,6 +204,7 @@ func create(restClient client.Client, obj client.Object) {
 	}
 }
 
+// delete is delete an object in the cluster with the given REST client
 func delete(restClient client.Client, obj client.Object) {
 	err := restClient.DeleteAllOf(context.TODO(), obj)
 	if err != nil {
@@ -200,76 +212,94 @@ func delete(restClient client.Client, obj client.Object) {
 	}
 }
 
+// Attach is get the secret and cluster objects and create on the another cluster so can sync after that
 func Attach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) {
+	fmt.Println("Attach process started")
+
 	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
 	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
 
 	restClient1 := createCustomClient(namespace1, kubeconfig1)
-	secret1, cluster1 := getClusterInfo(restClient1, objectKey1)
-
 	restClient2 := createCustomClient(namespace2, kubeconfig2)
-	secret2, cluster2 := getClusterInfo(restClient2, objectKey2)
 
-	create(restClient1, &secret2)
-	create(restClient1, &cluster2)
+	fmt.Println("Get some info from clusters")
+	cluster1Info := getClusterInfo(restClient1, objectKey1)
+	cluster2Info := getClusterInfo(restClient2, objectKey2)
 
-	create(restClient2, &secret1)
-	create(restClient2, &cluster1)
+	if cluster2Info.errCluster != nil || cluster2Info.errSecret != nil {
+		fmt.Printf("Cluster obj error: %v\n", cluster2Info.errCluster)
+		fmt.Printf("Secret obj error: %v\n", cluster2Info.errSecret)
+	} else if cluster1Info.errCluster != nil || cluster1Info.errSecret != nil {
+		fmt.Printf("Cluster obj error: %v\n", cluster1Info.errCluster)
+		fmt.Printf("Secret obj error: %v\n", cluster1Info.errSecret)
+	} else {
+		fmt.Println("Sync resources between clusters")
+		create(cluster1Info.restClient, &cluster2Info.secret)
+		create(cluster1Info.restClient, &cluster2Info.cluster)
+		create(cluster2Info.restClient, &cluster1Info.secret)
+		create(cluster2Info.restClient, &cluster1Info.cluster)
+	}
+
+	fmt.Println("Attach completed!")
 }
 
-func getClusterInfo(restClient client.Client, objectKey client.ObjectKey) (corev1.Secret, cluster_registry.Cluster) {
-	var secret corev1.Secret
-	var cluster cluster_registry.Cluster
-	var errSecret error
-	var errCluster error
+// Detach is get the secret and cluster objects and delete on the another cluster so break the sync after that
+func Detach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) {
+	fmt.Println("Detach process started!")
 
-	// 50 * 100ms = 5sec
-	var timeout = 50
+	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
+	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
+
+	restClient1 := createCustomClient(namespace1, kubeconfig1)
+	restClient2 := createCustomClient(namespace2, kubeconfig2)
+
+	fmt.Println("Get clusters and secrets info, please wait...")
+
+	cluster1Info := getClusterInfo(restClient1, objectKey1)
+	cluster1Info2 := getClusterInfo(restClient1, objectKey2)
+
+	cluster2Info := getClusterInfo(restClient2, objectKey1)
+	cluster2Info2 := getClusterInfo(restClient2, objectKey2)
+
+	for _, ci := range []clusterInfo{cluster1Info, cluster1Info2, cluster2Info, cluster2Info2} {
+		if ci.errCluster != nil || ci.errSecret != nil {
+			fmt.Println("Cluster or secret object not found! Skipped.")
+		} else {
+			delete(ci.restClient, &ci.cluster)
+			delete(ci.restClient, &ci.secret)
+			fmt.Println("Cluster or secret object found! Removed.")
+		}
+	}
+
+	fmt.Println("Detach completed!")
+}
+
+// getClusterInfo is return the secret and cluster object from the given REST client cluster
+func getClusterInfo(restClient client.Client, objectKey client.ObjectKey) clusterInfo {
+	var clusterInfoObj clusterInfo
+	var timeout = 3
 
 	for {
-		if secret.CreationTimestamp.IsZero() {
-			errSecret = restClient.Get(context.TODO(), objectKey, &secret)
+		if clusterInfoObj.secret.CreationTimestamp.IsZero() {
+			clusterInfoObj.errSecret = restClient.Get(context.TODO(), objectKey, &clusterInfoObj.secret)
 		}
 
-		if cluster.CreationTimestamp.IsZero() {
-			errCluster = restClient.Get(context.TODO(), objectKey, &cluster)
+		if clusterInfoObj.cluster.CreationTimestamp.IsZero() {
+			clusterInfoObj.errCluster = restClient.Get(context.TODO(), objectKey, &clusterInfoObj.cluster)
 		}
 
-		if errSecret == nil && errCluster == nil {
+		if clusterInfoObj.errSecret == nil && clusterInfoObj.errCluster == nil {
 			break
 		} else if timeout == 0 {
-			err := fmt.Sprintf("Secret resource error: %s\nCluster resource error: %s", errSecret.Error(), errCluster.Error())
-			panic(err)
+			return clusterInfoObj
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 		timeout--
 	}
 
-	secret.ResourceVersion = ""
-	cluster.ResourceVersion = ""
+	clusterInfoObj.secret.ResourceVersion = ""
+	clusterInfoObj.cluster.ResourceVersion = ""
+	clusterInfoObj.restClient = restClient
 
-	return secret, cluster
-}
-
-func Detach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) {
-	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
-	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
-
-	restClient1 := createCustomClient(namespace1, kubeconfig1)
-	secretActive1, clusterActive1 := getClusterInfo(restClient1, objectKey1)
-	secretActive2, clusterActive2 := getClusterInfo(restClient1, objectKey2)
-
-	restClient2 := createCustomClient(namespace2, kubeconfig2)
-	secretPassive1, clusterPassive1 := getClusterInfo(restClient2, objectKey1)
-	secretPassive2, clusterPassive2 := getClusterInfo(restClient2, objectKey2)
-
-	delete(restClient1, &secretActive1)
-	delete(restClient1, &secretActive2)
-	delete(restClient1, &clusterActive1)
-	delete(restClient1, &clusterActive2)
-
-	delete(restClient2, &secretPassive1)
-	delete(restClient2, &secretPassive2)
-	delete(restClient2, &clusterPassive1)
-	delete(restClient2, &clusterPassive2)
+	return clusterInfoObj
 }
