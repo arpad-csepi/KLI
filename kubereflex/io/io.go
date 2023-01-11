@@ -9,23 +9,26 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func fileRead(path string) []byte {
+func fileRead(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		panic("Nope, file not found")
+		return nil, err
 	}
 
-	return data
+	return data, nil
 }
 
-func ReadYAMLResourceFile(path string) client.Object {
-	var data = fileRead(path)
+func ReadYAMLResourceFile(path string) (client.Object, error) {
+	data, err := fileRead(path)
+	if err != nil {
+		return nil, err
+	}
 
 	var icp istio_operator.IstioControlPlane
-	err := yaml.Unmarshal(data, &icp)
+	err = yaml.Unmarshal(data, &icp)
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return icp.DeepCopy()
+	return icp.DeepCopy(), nil
 }

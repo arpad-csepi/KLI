@@ -25,21 +25,28 @@ func getKubeConfig(config string) *string {
 func TestGetClusterInfo(t *testing.T) {
 	objectKey := client.ObjectKey{Namespace: "cluster-registry", Name: "demo-active"}
 
-	restClient := createCustomClient(objectKey.Namespace, getKubeConfig(""))
+	restClient, err := createCustomClient(objectKey.Namespace, getKubeConfig(""))
+	if err != nil {
+		t.Error(err)
+	}
 
-	clusterInfo := getClusterInfo(restClient, objectKey)
+	clusterInfo, err := getClusterInfo(restClient, objectKey)
+	if err != nil {
+		t.Error(err)
+	}
+
 	if clusterInfo.secret.CreationTimestamp.IsZero() {
-        t.Error("Failed to get secret")
-    }
+		t.Error("Failed to get secret")
+	}
 	if clusterInfo.cluster.CreationTimestamp.IsZero() {
-        t.Error("Failed to get cluster")
-    }
+		t.Error("Failed to get cluster")
+	}
 }
 
 func TestRemove(t *testing.T) {
 	// TODO: Ugly & disgusting
 	CRDpath := "/home/kormi/Cisco/KLI/default_active_resource.yaml"
-	
+
 	cluster := getKubeConfig("")
 	// cluster := getKubeConfig("cluster2.yaml")
 
@@ -50,7 +57,7 @@ func TestRemove(t *testing.T) {
 	if deploymentName == "" && err != nil {
 		t.Error("Custom resource not found after apply")
 	}
-	
+
 	err = Remove(CRDpath, cluster)
 
 	if err != nil {
