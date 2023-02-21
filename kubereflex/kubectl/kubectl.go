@@ -87,6 +87,10 @@ func createCustomClient(namespace string, kubeconfig *string) (client.Client, er
 func CreateNamespace(namespace string, kubeconfig *string) error {
 	clientset, err := setKubeClient(kubeconfig)
 
+	if err != nil {
+		return err
+	}
+
 	nsName := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
@@ -94,6 +98,38 @@ func CreateNamespace(namespace string, kubeconfig *string) error {
 	}
 
 	_, err = clientset.CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetNamespace(namespace string, kubeconfig *string) (*corev1.Namespace, error) {
+	var ns *corev1.Namespace
+
+	clientset, err := setKubeClient(kubeconfig)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ns, err = clientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func DeleteNamespace(namespace string, kubeconfig *string) error {
+	clientset, err := setKubeClient(kubeconfig)
+
+	if err != nil {
+		return err
+	}
+
+	err = clientset.CoreV1().Namespaces().Delete(context.Background(), namespace, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}

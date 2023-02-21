@@ -4,7 +4,9 @@ import (
 	"flag"
 	"path/filepath"
 	"testing"
+	"time"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/homedir"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -20,6 +22,157 @@ func getKubeConfig(config string) *string {
 	flag.Parse()
 
 	return kubeconfig
+}
+
+func TestCreateNamespace(t *testing.T) {
+	namespaceName := "namespace-for-testing"
+	var namespace *v1.Namespace
+	timeout := 3 * time.Second
+	kubeconfig := getKubeConfig("")
+	var err error
+
+	err = CreateNamespace(namespaceName, kubeconfig)
+	if err != nil {
+		t.Errorf("Error when CreateNamespace called: %s", err)
+	}
+
+	for start := time.Now(); ; {
+		namespace, err = GetNamespace(namespaceName, kubeconfig)
+
+		if namespace != nil {
+			break
+		}
+
+		if time.Since(start) > timeout {
+			break
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}
+
+	if namespace == nil {
+		t.Errorf("Namespace does not exists")
+	}
+
+	if err != nil {
+		t.Errorf("Error when clientset get the namespace: %s", err)
+	}
+
+	DeleteNamespace(namespaceName, kubeconfig)
+}
+
+func TestGetNamespace(t *testing.T) {
+	namespaceName := "namespace-for-testing"
+	var namespace *v1.Namespace
+	timeout := 3 * time.Second
+	kubeconfig := getKubeConfig("")
+	var err error
+
+	err = CreateNamespace(namespaceName, kubeconfig)
+	if err != nil {
+		t.Errorf("Error when CreateNamespace called: %s", err)
+	}
+
+	for start := time.Now(); ; {
+		namespace, err = GetNamespace(namespaceName, kubeconfig)
+
+		if namespace != nil {
+			break
+		}
+
+		if time.Since(start) > timeout {
+			break
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}
+
+	if namespace == nil {
+		t.Errorf("Namespace does not exists")
+	}
+
+	if err != nil {
+		t.Errorf("Error when clientset get the namespace: %s", err)
+	}
+
+	DeleteNamespace(namespaceName, kubeconfig)
+}
+
+func TestDeleteNamespace(t *testing.T) {
+	namespaceName := "namespace-for-testing"
+	var namespace *v1.Namespace
+	timeout := 3 * time.Second
+	kubeconfig := getKubeConfig("")
+	var err error
+
+	err = CreateNamespace(namespaceName, kubeconfig)
+	if err != nil {
+		t.Errorf("Error when CreateNamespace called: %s", err)
+	}
+
+	for start := time.Now(); ; {
+		namespace, err = GetNamespace(namespaceName, kubeconfig)
+
+		if namespace != nil {
+			break
+		}
+
+		if time.Since(start) > timeout {
+			break
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}
+
+	if namespace == nil {
+		t.Errorf("Namespace does not exists")
+	}
+
+	if err != nil {
+		t.Errorf("Error when clientset get the namespace: %s", err)
+	}
+
+	DeleteNamespace(namespaceName, kubeconfig)
+}
+
+func TestIsNamespaceExists(t *testing.T) {
+	namespace := "namespace-for-testing"
+	kubeconfig := getKubeConfig("")
+
+	CreateNamespace(namespace, kubeconfig)
+
+	exists, err := IsNamespaceExists(namespace, kubeconfig)
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+	if exists != true {
+		t.Errorf("Namespace should exists")
+	}
+
+}
+
+func TestAPIServerEndpoint(t *testing.T) {
+	kubeconfig := getKubeConfig("")
+
+	endpoint, err := GetAPIServerEndpoint(kubeconfig)
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+	if endpoint == "" {
+		t.Errorf("Server endpoint should not empty")
+	}
+}
+
+func TestGetDeploymentName(t *testing.T) {
+	// Deploy before check
+}
+
+func TestAttach(t *testing.T) {
+	// Install before attach
+}
+
+func TestDetach(t *testing.T) {
+	// Install and attach before detach
 }
 
 func TestGetClusterInfo(t *testing.T) {

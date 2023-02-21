@@ -2,6 +2,7 @@ package helm
 
 import (
 	"flag"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -9,6 +10,26 @@ import (
 
 	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
 )
+
+type chartData struct {
+	chartUrl       string
+	repositoryName string
+	chartName      string
+	releaseName    string
+	namespace      string
+	arguments      map[string]string
+	deploymentName string
+}
+
+var testChart = chartData{
+	chartUrl:       "https://cisco-open.github.io/cluster-registry-controller",
+	repositoryName: "cluster-registry",
+	chartName:      "cluster-registry",
+	releaseName:    "cluster-registry",
+	namespace:      "cluster-registry",
+	arguments:      nil,
+	// arguments:      map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&mainClusterConfigPath)},
+}
 
 func getKubeConfig(config string) *string {
 	// TODO: Ugly & disgusting path management
@@ -23,57 +44,92 @@ func getKubeConfig(config string) *string {
 	return kubeconfig
 }
 
-func TestUninstall(t *testing.T) {
-	// cluster := getKubeConfig("")
-	cluster := getKubeConfig("cluster2.yaml")
+func TestSetSettings(t *testing.T) {
+	kubeconfig := getKubeConfig("")
 
-	// repositoryName := "cluster-registry"
-	// chartName := "cluster-registry"
-	// args := map[string]string{}
-	releaseName := "cluster-registry"
-	namespace := "cluster-registry"
+	setSettings(testChart.namespace, kubeconfig)
 
-	// repositoryName := "banzaicloud-stable"
-	// chartName := "istio-operator"
-	// releaseName := "banzaicloud-stable"
-	// namespace := "istio-system"
-	// args := map[string]string{"set": "clusterRegistry.clusterAPI.enabled=true,clusterRegistry.resourceSyncRules.enabled=true"}
-	// args := map[string]string{}
-
-	// Install(repositoryName, chartName, releaseName, namespace, args, cluster)
-	Uninstall(releaseName, namespace, cluster)
-		
-	deploymentName, err := kubectl.GetDeploymentName(releaseName, namespace, cluster)
-	
-	if deploymentName != "" && err == nil {
-		t.Errorf("Deployment found after uninstall")
+	if os.Getenv("HELM_NAMESPACE") != testChart.namespace {
+		t.Errorf("Helm namespace is incorrect")
+	}
+	if settings.Namespace() != testChart.namespace {
+		t.Errorf("Kubernetes namespace is incorrect")
+	}
+	if settings.KubeConfig != *kubeconfig {
+		t.Errorf("Kubeconfig is incorrect")
 	}
 }
 
 func TestInstall(t *testing.T) {
-	cluster := getKubeConfig("")
-	// cluster := getKubeConfig("cluster2.yaml")
+	kubeconfig := getKubeConfig("")
 
-	repositoryName := "cluster-registry"
-	chartName := "cluster-registry"
-	releaseName := "cluster-registry"
-	namespace := "cluster-registry"
-	args := map[string]string{}
-	// args := map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress=" + kubectl.GetAPIServerEndpoint(cluster)}
-	// args := map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress=" + kubectl.GetAPIServerEndpoint(cluster)}
+	Install(testChart.repositoryName, testChart.chartName, testChart.releaseName, testChart.namespace, testChart.arguments, kubeconfig)
 
-	// repositoryName := "banzaicloud-stable"
-	// chartName := "istio-operator"
-	// releaseName := "banzaicloud-stable"
-	// namespace := "istio-system"
-	// // args := map[string]string{"set": "clusterRegistry.clusterAPI.enabled=true,clusterRegistry.resourceSyncRules.enabled=true"}
-	// args := map[string]string{}
+	deploymentName, err := kubectl.GetDeploymentName(testChart.releaseName, testChart.namespace, kubeconfig)
+	if err != nil {
+		t.Errorf("Error when GetDeploymentName called: %s", err)
+	}
 
-	Install(repositoryName, chartName, releaseName, namespace, args, cluster)
-
-	deploymentName, err := kubectl.GetDeploymentName(releaseName, namespace, cluster)
-	
-	if deploymentName == "" && err != nil {
+	if deploymentName == "" {
 		t.Errorf("Deployment not found after install")
+	}
+}
+
+func TestUninstall(t *testing.T) {
+	kubeconfig := getKubeConfig("")
+
+	Uninstall(testChart.releaseName, testChart.namespace, kubeconfig)
+
+	var err error
+	testChart.deploymentName, err = kubectl.GetDeploymentName(testChart.releaseName, testChart.namespace, kubeconfig)
+	if err != nil {
+		t.Errorf("Error when GetDeploymentName called: %s", err)
+	}
+
+	if testChart.deploymentName != "" {
+		t.Errorf("Deployment found after uninstall")
+	}
+}
+
+func TestIsRepositoryExists(t *testing.T) {
+	RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
+
+	exists, err := IsRepositoryExists("cluster-registry")
+	if exists != true {
+		t.Errorf("This repository should exists at this point")
+	}
+
+	if err != nil {
+		t.Errorf("Error when repository check called: %s", err)
+	}
+
+	exists, err = IsRepositoryExists("this-repository-a-bit-sus")
+	if exists != false {
+		t.Errorf("This repository should not exists")
+	}
+
+	if err != nil {
+		t.Errorf("Error when repository check called %s", err)
+	}
+
+}
+
+func TestRepositoryAdd(t *testing.T) {
+	err := RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
+	if err != nil {
+		t.Errorf("Error when RepositoryAdd called: %s", err)
+	}
+
+	err = RepositoryAdd("this-repository-a-bit-sus", "no-where")
+	if err == nil {
+		t.Errorf("Error when RepositoryAdd called: %s", err)
+	}
+}
+
+func TestRepositoryUpdate(t *testing.T) {
+	err := RepositoryUpdate()
+
+	if err != nil {
+		t.Errorf("Repository update failed: %s", err)
 	}
 }
