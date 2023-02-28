@@ -8,12 +8,16 @@ import (
 )
 
 func InstallHelmChart(chartUrl string, repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string) {
-	isNamespaceExists, err := kubectl.IsNamespaceExists(namespace, kubeconfig)
+	err := kubectl.CreateClient(kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	isNamespaceExists, err := kubectl.IsNamespaceExists(namespace)
 	if err != nil {
 		panic(err)
 	}
 	if !isNamespaceExists {
-		err := kubectl.CreateNamespace(namespace, kubeconfig)
+		err := kubectl.CreateNamespace(namespace)
 		if err != nil {
 			panic(err)
 		}
@@ -44,7 +48,11 @@ func UninstallHelmChart(releaseName string, namespace string, kubeconfig *string
 }
 
 func GetDeploymentName(releaseName string, namespace string, kubeconfig *string) string {
-	deploymentName, err := kubectl.GetDeploymentName(releaseName, namespace, kubeconfig)
+	err := kubectl.CreateClient(kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	deploymentName, err := kubectl.GetDeploymentName(releaseName, namespace)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -52,14 +60,22 @@ func GetDeploymentName(releaseName string, namespace string, kubeconfig *string)
 }
 
 func Verify(deploymentName string, namespace string, kubeconfig *string, timeout time.Duration) {
-	err := kubectl.Verify(deploymentName, namespace, kubeconfig, timeout)
+	err := kubectl.CreateClient(kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	err = kubectl.Verify(deploymentName, namespace, timeout)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func GetAPIServerEndpoint(kubeconfig *string) string {
-	endpoint, err := kubectl.GetAPIServerEndpoint(kubeconfig)
+	err := kubectl.CreateClient(kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	endpoint, err := kubectl.GetAPIServerEndpoint()
 	if err != nil {
 		panic(err)
 	}
@@ -67,28 +83,44 @@ func GetAPIServerEndpoint(kubeconfig *string) string {
 }
 
 func Apply(CRDpath string, kubeconfig *string) {
-	err := kubectl.Apply(CRDpath, kubeconfig)
+	err := kubectl.CreateCustomClient(kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	err = kubectl.Apply(CRDpath)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func Remove(CRDpath string, kubeconfig *string) {
-	err := kubectl.Remove(CRDpath, kubeconfig)
+	err := kubectl.CreateCustomClient(kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	err = kubectl.Remove(CRDpath)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func Attach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) {
-	err := kubectl.Attach(kubeconfig1, kubeconfig2, namespace1, namespace2)
+	err := kubectl.CreateCustomClient(kubeconfig1, kubeconfig2)
+	if err != nil {
+		panic(err)
+	}
+	err = kubectl.Attach(namespace1, namespace2)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func Detach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) {
-	err := kubectl.Detach(kubeconfig1, kubeconfig2, namespace1, namespace2)
+	err := kubectl.CreateCustomClient(kubeconfig1, kubeconfig2)
+	if err != nil {
+		panic(err)
+	}
+	err = kubectl.Detach(namespace1, namespace2)
 	if err != nil {
 		panic(err)
 	}

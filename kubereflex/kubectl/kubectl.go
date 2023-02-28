@@ -22,82 +22,23 @@ import (
 	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
 )
 
+// TODO: Can be replaced with the customClient variable?
+var clientset *kubernetes.Clientset
+var customClients []client.Client
+
 type clusterInfo struct {
 	restClient client.Client
 	secret     corev1.Secret
 	cluster    cluster_registry.Cluster
 }
 
-// setKubeClient set up kubernetes clientset from the given kubeconfig and return with that
-func setKubeClient(kubeconfig *string) (*kubernetes.Clientset, error) {
+// CreateClient set up kubernetes clientset from the given kubeconfig and return with that
+func CreateClient(kubeconfig *string) error {
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientset, nil
-}
-
-// createCustomClient set up kubernetes REST client which scheme contains custom kubernetes types from banzaicloud and cisco-open
-func createCustomClient(namespace string, kubeconfig *string) (client.Client, error) {
-	// REST configuration for creating custom client
-	restConfig, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	// discoverClient discover server-supported API groups, versions and resources.
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	// runtimeScheme contains already registered types in the API server
-	runtimeScheme := scheme.Scheme
-
-	// Add custom types to the runtime scheme
-	err = istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
-	if err != nil {
-		return nil, err
-	}
-	err = cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
-	if err != nil {
-		return nil, err
-	}
-	// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
-	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
-
-	// restClient is the custom client which known the custom resource types
-	restClient, err := client.New(restConfig, client.Options{Scheme: runtimeScheme, Mapper: mapper, Opts: client.WarningHandlerOptions{}})
-	if err != nil {
-		return nil, err
-	}
-
-	namespacedRestClient := client.NewNamespacedClient(restClient, namespace)
-
-	return namespacedRestClient, nil
-}
-
-// TODO: Deprecated due to helm can create namespace before install
-// CreateNamespace create namespace to provided kubeconfig kubecontext
-func CreateNamespace(namespace string, kubeconfig *string) error {
-	clientset, err := setKubeClient(kubeconfig)
-
 	if err != nil {
 		return err
 	}
-
-	nsName := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-	}
-
-	_, err = clientset.CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
+	clientset, err = kubernetes.NewForConfig(config)
 	if err != nil {
 		return err
 	}
@@ -105,16 +46,71 @@ func CreateNamespace(namespace string, kubeconfig *string) error {
 	return nil
 }
 
-func GetNamespace(namespace string, kubeconfig *string) (*corev1.Namespace, error) {
-	var ns *corev1.Namespace
-
-	clientset, err := setKubeClient(kubeconfig)
-
-	if err != nil {
-		return nil, err
+// createCustomClient set up kubernetes REST client which scheme contains custom kubernetes types from banzaicloud and cisco-open
+func CreateCustomClient(kubeconfig ...*string) error {
+	if len(kubeconfig) == 0 {
+		return errors.New("no kubeconfig was definied")
 	}
 
-	ns, err = clientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	for i := 0; i < len(kubeconfig); i++ {
+		// REST configuration for creating custom client
+		restConfig, err := clientcmd.BuildConfigFromFlags("", *kubeconfig[i])
+		if err != nil {
+			return err
+		}
+
+		// discoverClient discover server-supported API groups, versions and resources.
+		discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+		if err != nil {
+			return err
+		}
+
+		// runtimeScheme contains already registered types in the API server
+		runtimeScheme := scheme.Scheme
+
+		// Add custom types to the runtime scheme
+		err = istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
+		if err != nil {
+			return err
+		}
+		err = cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
+		if err != nil {
+			return err
+		}
+		// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
+		mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
+
+		// restClient is the custom client which known the custom resource types
+		customClient, err := client.New(restConfig, client.Options{Scheme: runtimeScheme, Mapper: mapper, Opts: client.WarningHandlerOptions{}})
+		if err != nil {
+			return err
+		}
+
+		customClients = append(customClients, customClient)
+	}
+
+	return nil
+}
+
+// TODO: Deprecated due to helm can create namespace before install
+// CreateNamespace create namespace to provided kubeconfig kubecontext
+func CreateNamespace(namespace string) error {
+	nsName := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+
+	_, err := clientset.CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetNamespace(namespace string) (*corev1.Namespace, error) {
+	ns, err := clientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -122,14 +118,8 @@ func GetNamespace(namespace string, kubeconfig *string) (*corev1.Namespace, erro
 	return ns, nil
 }
 
-func DeleteNamespace(namespace string, kubeconfig *string) error {
-	clientset, err := setKubeClient(kubeconfig)
-
-	if err != nil {
-		return err
-	}
-
-	err = clientset.CoreV1().Namespaces().Delete(context.Background(), namespace, metav1.DeleteOptions{})
+func DeleteNamespace(namespace string) error {
+	err := clientset.CoreV1().Namespaces().Delete(context.Background(), namespace, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -138,11 +128,7 @@ func DeleteNamespace(namespace string, kubeconfig *string) error {
 }
 
 // IsNamespaceExists check the given namespace is exists already or not
-func IsNamespaceExists(namespace string, kubeconfig *string) (bool, error) {
-	clientset, err := setKubeClient(kubeconfig)
-	if err != nil {
-		return false, err
-	}
+func IsNamespaceExists(namespace string) (bool, error) {
 	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return false, err
@@ -158,11 +144,7 @@ func IsNamespaceExists(namespace string, kubeconfig *string) (bool, error) {
 }
 
 // Verify check release status until the given time
-func Verify(deploymentName string, namespace string, kubeconfig *string, timeout time.Duration) error {
-	clientset, err := setKubeClient(kubeconfig)
-	if err != nil {
-		return err
-	}
+func Verify(deploymentName string, namespace string, timeout time.Duration) error {
 	animation := [7]string{"_", "-", "`", "'", "´", "-", "_"}
 	frame := 0
 
@@ -193,18 +175,16 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 }
 
 // Apply is read the custom resource definition and apply it with custom REST client
-func Apply(CRDPath string, kubeconfig *string) error {
+func Apply(CRDPath string) error {
 	fmt.Printf("Apply %s resource file\n", CRDPath)
 	CRD, err := io.ReadYAMLResourceFile(CRDPath)
 	if err != nil {
 		return err
 	}
-	restClient, err := createCustomClient(CRD.GetNamespace(), kubeconfig)
-	if err != nil {
-		return err
-	}
 
-	err = restClient.Create(context.TODO(), CRD)
+	customClients[0] = client.NewNamespacedClient(customClients[0], CRD.GetNamespace())
+
+	err = customClients[0].Create(context.TODO(), CRD)
 	if err != nil {
 		return err
 	}
@@ -214,17 +194,16 @@ func Apply(CRDPath string, kubeconfig *string) error {
 }
 
 // Remove is read the custom resource definition and remove it with custom REST client
-func Remove(CRDpath string, kubeconfig *string) error {
+func Remove(CRDpath string) error {
 	fmt.Printf("Remove resource based on %s\n", CRDpath)
 	CRD, err := io.ReadYAMLResourceFile(CRDpath)
 	if err != nil {
 		return err
 	}
-	restClient, err := createCustomClient(CRD.GetNamespace(), kubeconfig)
-	if err != nil {
-		return err
-	}
-	err = restClient.DeleteAllOf(context.TODO(), CRD)
+
+	customClients[0] = client.NewNamespacedClient(customClients[0], CRD.GetNamespace())
+
+	err = customClients[0].DeleteAllOf(context.TODO(), CRD)
 	if err != nil {
 		return err
 	}
@@ -234,20 +213,12 @@ func Remove(CRDpath string, kubeconfig *string) error {
 }
 
 // GetAPIServerEndpoint is return with the API endpoint URL address
-func GetAPIServerEndpoint(kubeconfig *string) (string, error) {
-	clientset, err := setKubeClient(kubeconfig)
-	if err != nil {
-		return "", err
-	}
+func GetAPIServerEndpoint() (string, error) {
 	return clientset.DiscoveryClient.RESTClient().Get().URL().String(), nil
 }
 
 // GetDeploymentName is search the deployment name based on the chart release name
-func GetDeploymentName(releaseName string, namespace string, kubeconfig *string) (string, error) {
-	clientset, err := setKubeClient(kubeconfig)
-	if err != nil {
-		return "", err
-	}
+func GetDeploymentName(releaseName string, namespace string) (string, error) {
 	deployments, err := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return "", err
@@ -282,28 +253,22 @@ func delete(restClient client.Client, obj client.Object) {
 }
 
 // Attach is get the secret and cluster objects and create on the another cluster so can sync after that
-func Attach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) error {
+func Attach(namespace1 string, namespace2 string) error {
 	fmt.Println("Attach process started")
 
 	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
 	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
 
-	restClient1, err := createCustomClient(namespace1, kubeconfig1)
-	if err != nil {
-		return err
-	}
-	restClient2, err := createCustomClient(namespace2, kubeconfig2)
-	if err != nil {
-		return err
-	}
+	customClients[0] = client.NewNamespacedClient(customClients[0], namespace1)
+	customClients[1] = client.NewNamespacedClient(customClients[1], namespace2)
 
 	fmt.Println("Get some info from clusters")
-	cluster1Info, err := getClusterInfo(restClient1, objectKey1)
+	cluster1Info, err := getClusterInfo(customClients[0], objectKey1)
 	if err != nil {
 		return err
 	}
 
-	cluster2Info, err := getClusterInfo(restClient2, objectKey2)
+	cluster2Info, err := getClusterInfo(customClients[1], objectKey2)
 	if err != nil {
 		return err
 	}
@@ -319,49 +284,49 @@ func Attach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespa
 }
 
 // Detach is get the secret and cluster objects and delete on the another cluster so break the sync after that
-func Detach(kubeconfig1 *string, kubeconfig2 *string, namespace1 string, namespace2 string) error {
+func Detach(namespace1 string, namespace2 string) error {
 	fmt.Println("Detach process started!")
 
 	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
 	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
 
-	restClient1, err := createCustomClient(namespace1, kubeconfig1)
-	if err != nil {
-		return err
-	}
-	restClient2, err := createCustomClient(namespace2, kubeconfig2)
-	if err != nil {
-		return err
-	}
+	customClients[0] = client.NewNamespacedClient(customClients[0], namespace1)
+	customClients[1] = client.NewNamespacedClient(customClients[1], namespace2)
 
 	fmt.Println("Get clusters and secrets info, please wait...")
 
-	cluster1Info, err1 := getClusterInfo(restClient1, objectKey1)
-	if err != nil {
+	//TODO: Make a better struct for more compact code
+	cluster1Info, err1 := getClusterInfo(customClients[0], objectKey1)
+	if err1 != nil {
 		fmt.Printf("%s not here on the main cluster.\n", objectKey1.Name)
+	} else {
+		delete(cluster1Info.restClient, &cluster1Info.cluster)
+		delete(cluster1Info.restClient, &cluster1Info.secret)
 	}
-	cluster1Info2, err2 := getClusterInfo(restClient1, objectKey2)
-	if err != nil {
+	cluster1Info2, err2 := getClusterInfo(customClients[0], objectKey2)
+	if err2 != nil {
 		fmt.Printf("%s not here on the main cluster.\n", objectKey2.Name)
+	} else {
+		delete(cluster1Info2.restClient, &cluster1Info2.cluster)
+		delete(cluster1Info2.restClient, &cluster1Info2.secret)
 	}
 
-	cluster2Info, err3 := getClusterInfo(restClient2, objectKey1)
-	if err != nil {
+	cluster2Info, err3 := getClusterInfo(customClients[1], objectKey1)
+	if err3 != nil {
 		fmt.Printf("%s not here on the secondary cluster.\n", objectKey1.Name)
+	} else {
+		delete(cluster2Info.restClient, &cluster2Info.cluster)
+		delete(cluster2Info.restClient, &cluster2Info.secret)
 	}
-	cluster2Info2, err4 := getClusterInfo(restClient2, objectKey2)
-	if err != nil {
+	cluster2Info2, err4 := getClusterInfo(customClients[1], objectKey2)
+	if err4 != nil {
 		fmt.Printf("%s not here on the secondary cluster.\n", objectKey2.Name)
+	} else {
+		delete(cluster2Info2.restClient, &cluster2Info2.cluster)
+		delete(cluster2Info2.restClient, &cluster2Info2.secret)
 	}
 
-	if err1 == nil && err2 == nil && err3 == nil && err4 == nil {
-		for _, ci := range []clusterInfo{cluster1Info, cluster1Info2, cluster2Info, cluster2Info2} {
-			delete(ci.restClient, &ci.cluster)
-			delete(ci.restClient, &ci.secret)
-			fmt.Println("Cluster or secret objects are removed.")
-		}
-	}
-	fmt.Println("Detach completed!")
+	fmt.Println("Cluster or secret objects are removed.\nDetach completed!")
 	return nil
 }
 
