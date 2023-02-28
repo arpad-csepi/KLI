@@ -8,8 +8,37 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/homedir"
+	"k8s.io/kubectl/pkg/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	testclient "k8s.io/client-go/kubernetes/fake"
+
+	istio_operator "github.com/banzaicloud/istio-operator/api/v2/v1alpha1"
+	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
 )
+
+func createTestClient(namespace string) testclient.Clientset {
+	client := testclient.NewSimpleClientset()
+
+	// runtimeScheme contains already registered types in the API server
+	runtimeScheme := scheme.Scheme
+
+	// Add custom types to the runtime scheme
+	err := istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
+	if err != nil {
+		panic("Testclient add to scheme failed")
+	}
+
+	err = cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
+	if err != nil {
+		panic("Testclient add to scheme failed")
+	}
+
+	// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
+	// mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(client.Discovery()))
+
+	return *client
+}
 
 func getKubeConfig(config string) *string {
 	// TODO: Ugly & disgusting path management

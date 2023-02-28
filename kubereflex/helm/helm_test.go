@@ -65,7 +65,9 @@ func TestInstall(t *testing.T) {
 
 	Install(testChart.repositoryName, testChart.chartName, testChart.releaseName, testChart.namespace, testChart.arguments, kubeconfig)
 
-	deploymentName, err := kubectl.GetDeploymentName(testChart.releaseName, testChart.namespace, kubeconfig)
+	// TODO: Set a fake client up before use GetDeploymentName
+	t.Errorf("No client definied")
+	deploymentName, err := kubectl.GetDeploymentName(testChart.releaseName, testChart.namespace)
 	if err != nil {
 		t.Errorf("Error when GetDeploymentName called: %s", err)
 	}
@@ -81,7 +83,9 @@ func TestUninstall(t *testing.T) {
 	Uninstall(testChart.releaseName, testChart.namespace, kubeconfig)
 
 	var err error
-	testChart.deploymentName, err = kubectl.GetDeploymentName(testChart.releaseName, testChart.namespace, kubeconfig)
+	// TODO: Set a fake client up before use GetDeploymentName
+	t.Errorf("No client definied")
+	testChart.deploymentName, err = kubectl.GetDeploymentName(testChart.releaseName, testChart.namespace)
 	if err != nil {
 		t.Errorf("Error when GetDeploymentName called: %s", err)
 	}
