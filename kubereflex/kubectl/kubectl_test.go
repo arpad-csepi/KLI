@@ -1,194 +1,82 @@
 package kubectl
 
 import (
-	"flag"
-	"path/filepath"
 	"testing"
-	"time"
-
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/util/homedir"
-	"k8s.io/kubectl/pkg/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	testclient "k8s.io/client-go/kubernetes/fake"
-
-	istio_operator "github.com/banzaicloud/istio-operator/api/v2/v1alpha1"
-	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
 )
 
-func createTestClient(namespace string) testclient.Clientset {
-	client := testclient.NewSimpleClientset()
+var namespaceName string = "namespace-for-testing"
 
-	// runtimeScheme contains already registered types in the API server
-	runtimeScheme := scheme.Scheme
+func createTestClient() {
+	clientset = testclient.NewSimpleClientset()
 
-	// Add custom types to the runtime scheme
-	err := istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
-	if err != nil {
-		panic("Testclient add to scheme failed")
-	}
+	// // runtimeScheme contains already registered types in the API server
+	// runtimeScheme := scheme.Scheme
 
-	err = cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
-	if err != nil {
-		panic("Testclient add to scheme failed")
-	}
+	// // Add custom types to the runtime scheme
+	// err := istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
+	// if err != nil {
+	// 	panic("Testclient add to scheme failed")
+	// }
+
+	// err = cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
+	// if err != nil {
+	// 	panic("Testclient add to scheme failed")
+	// }
 
 	// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
 	// mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(client.Discovery()))
-
-	return *client
-}
-
-func getKubeConfig(config string) *string {
-	// TODO: Ugly & disgusting path management
-	var kubeconfig *string
-	if home := homedir.HomeDir(); config == "" && home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, "Cisco", "KLI", config), "absolute path to the kubeconfig file")
-	}
-	flag.Parse()
-
-	return kubeconfig
 }
 
 func TestCreateNamespace(t *testing.T) {
-	namespaceName := "namespace-for-testing"
-	var namespace *v1.Namespace
-	timeout := 3 * time.Second
-	kubeconfig := getKubeConfig("")
-	var err error
+	createTestClient()
 
-	err = CreateNamespace(namespaceName, kubeconfig)
+	err := CreateNamespace(namespaceName)
 	if err != nil {
-		t.Errorf("Error when CreateNamespace called: %s", err)
+		t.Error(err.Error())
 	}
-
-	for start := time.Now(); ; {
-		namespace, err = GetNamespace(namespaceName, kubeconfig)
-
-		if namespace != nil {
-			break
-		}
-
-		if time.Since(start) > timeout {
-			break
-		}
-
-		time.Sleep(250 * time.Millisecond)
-	}
-
-	if namespace == nil {
-		t.Errorf("Namespace does not exists")
-	}
-
-	if err != nil {
-		t.Errorf("Error when clientset get the namespace: %s", err)
-	}
-
-	DeleteNamespace(namespaceName, kubeconfig)
 }
 
 func TestGetNamespace(t *testing.T) {
-	namespaceName := "namespace-for-testing"
-	var namespace *v1.Namespace
-	timeout := 3 * time.Second
-	kubeconfig := getKubeConfig("")
-	var err error
+	createTestClient()
 
-	err = CreateNamespace(namespaceName, kubeconfig)
-	if err != nil {
-		t.Errorf("Error when CreateNamespace called: %s", err)
+	_ = CreateNamespace(namespaceName)
+	
+	namespace, err := GetNamespace(namespaceName)
+	if err != nil || namespace == nil {
+		t.Error(err.Error())
 	}
-
-	for start := time.Now(); ; {
-		namespace, err = GetNamespace(namespaceName, kubeconfig)
-
-		if namespace != nil {
-			break
-		}
-
-		if time.Since(start) > timeout {
-			break
-		}
-
-		time.Sleep(250 * time.Millisecond)
-	}
-
-	if namespace == nil {
-		t.Errorf("Namespace does not exists")
-	}
-
-	if err != nil {
-		t.Errorf("Error when clientset get the namespace: %s", err)
-	}
-
-	DeleteNamespace(namespaceName, kubeconfig)
 }
 
 func TestDeleteNamespace(t *testing.T) {
-	namespaceName := "namespace-for-testing"
-	var namespace *v1.Namespace
-	timeout := 3 * time.Second
-	kubeconfig := getKubeConfig("")
-	var err error
+	createTestClient()
 
-	err = CreateNamespace(namespaceName, kubeconfig)
+	_ = CreateNamespace(namespaceName)
+
+	err := DeleteNamespace(namespaceName)
 	if err != nil {
-		t.Errorf("Error when CreateNamespace called: %s", err)
+		t.Error(err.Error())
 	}
-
-	for start := time.Now(); ; {
-		namespace, err = GetNamespace(namespaceName, kubeconfig)
-
-		if namespace != nil {
-			break
-		}
-
-		if time.Since(start) > timeout {
-			break
-		}
-
-		time.Sleep(250 * time.Millisecond)
-	}
-
-	if namespace == nil {
-		t.Errorf("Namespace does not exists")
-	}
-
-	if err != nil {
-		t.Errorf("Error when clientset get the namespace: %s", err)
-	}
-
-	DeleteNamespace(namespaceName, kubeconfig)
 }
 
 func TestIsNamespaceExists(t *testing.T) {
-	namespace := "namespace-for-testing"
-	kubeconfig := getKubeConfig("")
+	createTestClient()
 
-	CreateNamespace(namespace, kubeconfig)
+	_ = CreateNamespace(namespaceName)
 
-	exists, err := IsNamespaceExists(namespace, kubeconfig)
-	if err != nil {
-		t.Errorf("%s", err)
+	exists, err := IsNamespaceExists(namespaceName)
+	if err != nil || exists != true {
+		t.Error(err.Error())
 	}
-	if exists != true {
-		t.Errorf("Namespace should exists")
-	}
-
 }
 
 func TestAPIServerEndpoint(t *testing.T) {
-	kubeconfig := getKubeConfig("")
+	createTestClient()
 
-	endpoint, err := GetAPIServerEndpoint(kubeconfig)
-	if err != nil {
-		t.Errorf("%s", err)
-	}
-	if endpoint == "" {
-		t.Errorf("Server endpoint should not empty")
+	endpoint, err := GetAPIServerEndpoint()
+	if err != nil || endpoint == "" {
+		t.Error(err.Error())
 	}
 }
 
@@ -205,48 +93,48 @@ func TestDetach(t *testing.T) {
 }
 
 func TestGetClusterInfo(t *testing.T) {
-	objectKey := client.ObjectKey{Namespace: "cluster-registry", Name: "demo-active"}
+	// objectKey := client.ObjectKey{Namespace: "cluster-registry", Name: "demo-active"}
 
-	restClient, err := createCustomClient(objectKey.Namespace, getKubeConfig(""))
-	if err != nil {
-		t.Error(err)
-	}
+	// restClient, err := createCustomClient(objectKey.Namespace)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
 
-	clusterInfo, err := getClusterInfo(restClient, objectKey)
-	if err != nil {
-		t.Error(err)
-	}
+	// clusterInfo, err := getClusterInfo(restClient, objectKey)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
 
-	if clusterInfo.secret.CreationTimestamp.IsZero() {
-		t.Error("Failed to get secret")
-	}
-	if clusterInfo.cluster.CreationTimestamp.IsZero() {
-		t.Error("Failed to get cluster")
-	}
+	// if clusterInfo.secret.CreationTimestamp.IsZero() {
+	// 	t.Error("Failed to get secret")
+	// }
+	// if clusterInfo.cluster.CreationTimestamp.IsZero() {
+	// 	t.Error("Failed to get cluster")
+	// }
+	t.Fail()
 }
 
 func TestRemove(t *testing.T) {
+	createTestClient()
+
 	// TODO: Ugly & disgusting
 	CRDpath := "/home/kormi/Cisco/KLI/default_active_resource.yaml"
 
-	cluster := getKubeConfig("")
-	// cluster := getKubeConfig("cluster2.yaml")
+	Apply(CRDpath)
 
-	Apply(CRDpath, cluster)
-
-	deploymentName, err := GetDeploymentName("icp-v115x", "istio-system", cluster)
+	deploymentName, err := GetDeploymentName("icp-v115x", "istio-system")
 
 	if deploymentName == "" && err != nil {
 		t.Error("Custom resource not found after apply")
 	}
 
-	err = Remove(CRDpath, cluster)
+	err = Remove(CRDpath)
 
 	if err != nil {
 		t.Error("Try to delete non-exist custom resource")
 	}
 
-	deploymentName, err = GetDeploymentName("icp-v115x", "istio-system", cluster)
+	deploymentName, err = GetDeploymentName("icp-v115x", "istio-system")
 
 	if deploymentName != "" && err == nil {
 		t.Error("Custom resource not removed after delete")

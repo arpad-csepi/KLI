@@ -23,7 +23,7 @@ import (
 )
 
 // TODO: Can be replaced with the customClient variable?
-var clientset *kubernetes.Clientset
+var clientset kubernetes.Interface
 var customClients []client.Client
 
 type clusterInfo struct {
@@ -213,8 +213,9 @@ func Remove(CRDpath string) error {
 }
 
 // GetAPIServerEndpoint is return with the API endpoint URL address
+// BUG: Some RESTClient problem, cannot get the url in test
 func GetAPIServerEndpoint() (string, error) {
-	return clientset.DiscoveryClient.RESTClient().Get().URL().String(), nil
+	return clientset.Discovery().RESTClient().Get().URL().String(), nil
 }
 
 // GetDeploymentName is search the deployment name based on the chart release name
