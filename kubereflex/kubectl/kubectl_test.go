@@ -115,28 +115,29 @@ func TestGetClusterInfo(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	createTestClient()
+	// createTestClient()
 
-	// TODO: Ugly & disgusting
-	CRDpath := "/home/kormi/Cisco/KLI/default_active_resource.yaml"
+	// // TODO: Ugly & disgusting
+	// CRDpath := "/home/kormi/Cisco/KLI/default_active_resource.yaml"
 
-	Apply(CRDpath)
+	// Apply(CRDpath)
 
-	deploymentName, err := GetDeploymentName("icp-v115x", "istio-system")
+	// deploymentName, err := GetDeploymentName("icp-v115x", "istio-system")
 
-	if deploymentName == "" && err != nil {
-		t.Error("Custom resource not found after apply")
-	}
+	// if deploymentName == "" && err != nil {
+	// 	t.Error("Custom resource not found after apply")
+	// }
 
-	err = Remove(CRDpath)
+	// err = Remove(CRDpath)
 
-	if err != nil {
-		t.Error("Try to delete non-exist custom resource")
-	}
+	// if err != nil {
+	// 	t.Error("Try to delete non-exist custom resource")
+	// }
 
-	deploymentName, err = GetDeploymentName("icp-v115x", "istio-system")
+	// deploymentName, err = GetDeploymentName("icp-v115x", "istio-system")
 
-	if deploymentName != "" && err == nil {
-		t.Error("Custom resource not removed after delete")
-	}
+	// if deploymentName != "" && err == nil {
+	// 	t.Error("Custom resource not removed after delete")
+	// }
+	t.Fail()
 }
