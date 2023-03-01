@@ -1,15 +1,20 @@
 package kubectl
 
 import (
+	"context"
 	"testing"
+	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
 )
 
-var namespaceName string = "namespace-for-testing"
+var namespaceTestName string = "namespace-for-testing"
+var deploymentTestName = "deployment-for-testing"
 
 func createTestClient() {
-	clientset = testclient.NewSimpleClientset()
+	Clientset = testclient.NewSimpleClientset()
 
 	// // runtimeScheme contains already registered types in the API server
 	// runtimeScheme := scheme.Scheme
@@ -32,7 +37,7 @@ func createTestClient() {
 func TestCreateNamespace(t *testing.T) {
 	createTestClient()
 
-	err := CreateNamespace(namespaceName)
+	err := CreateNamespace(namespaceTestName)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -41,9 +46,9 @@ func TestCreateNamespace(t *testing.T) {
 func TestGetNamespace(t *testing.T) {
 	createTestClient()
 
-	_ = CreateNamespace(namespaceName)
-	
-	namespace, err := GetNamespace(namespaceName)
+	_ = CreateNamespace(namespaceTestName)
+
+	namespace, err := GetNamespace(namespaceTestName)
 	if err != nil || namespace == nil {
 		t.Error(err.Error())
 	}
@@ -52,9 +57,9 @@ func TestGetNamespace(t *testing.T) {
 func TestDeleteNamespace(t *testing.T) {
 	createTestClient()
 
-	_ = CreateNamespace(namespaceName)
+	_ = CreateNamespace(namespaceTestName)
 
-	err := DeleteNamespace(namespaceName)
+	err := DeleteNamespace(namespaceTestName)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -63,16 +68,40 @@ func TestDeleteNamespace(t *testing.T) {
 func TestIsNamespaceExists(t *testing.T) {
 	createTestClient()
 
-	_ = CreateNamespace(namespaceName)
+	_ = CreateNamespace(namespaceTestName)
 
-	exists, err := IsNamespaceExists(namespaceName)
+	exists, err := IsNamespaceExists(namespaceTestName)
 	if err != nil || exists != true {
 		t.Error(err.Error())
 	}
 }
 
 func TestVerify(t *testing.T) {
-	t.Fail()
+	createTestClient()
+
+	testTimeout := 2 * time.Second
+
+	deploymentData := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        deploymentTestName,
+			Namespace:   namespaceTestName,
+		},
+		Status:     appsv1.DeploymentStatus{
+			Replicas:            3,
+			ReadyReplicas:       3,
+		},
+	}
+
+	_, err := Clientset.AppsV1().Deployments(namespaceTestName).Create(context.TODO(),
+		&deploymentData, metav1.CreateOptions{})
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	err = Verify(deploymentTestName, namespaceTestName, testTimeout)
+	if err != nil {
+		t.Error(err.Error())
+	}
 }
 
 func TestApply(t *testing.T) {
@@ -117,7 +146,32 @@ func TestAPIServerEndpoint(t *testing.T) {
 }
 
 func TestGetDeploymentName(t *testing.T) {
-	// Deploy before check
+	createTestClient()
+
+	deploymentTestReleaseName := "annotation-for-testing"
+	deploymentTestAnnotations := map[string]string{"deploymentTestReleaseName": deploymentTestReleaseName}
+
+	deploymentData := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        deploymentTestName,
+			Namespace:   namespaceTestName,
+			Annotations: deploymentTestAnnotations,
+		},
+	}
+
+	_, err := Clientset.AppsV1().Deployments(namespaceTestName).Create(context.TODO(), &deploymentData, metav1.CreateOptions{})
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	deploymentName, err := GetDeploymentName(deploymentTestReleaseName, namespaceTestName)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if deploymentTestName != deploymentName {
+		t.Error("Deployment name is wrong!")
+	}
 }
 
 func TestAttach(t *testing.T) {

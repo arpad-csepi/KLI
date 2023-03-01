@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var clientset kubernetes.Interface
+var Clientset kubernetes.Interface
 var settings *cli.EnvSettings = cli.New()
 
 func setSettings(namespace string, kubeconfig *string) {
@@ -142,9 +142,11 @@ func RepositoryUpdate() error {
 func installChart(releaseName, repositoryName, chartName string, args map[string]string) error {
 	fmt.Printf("Install %s chart from %s repository...\n", chartName, repositoryName)
 	actionConfig := new(action.Configuration)
-	if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER"), debug); err != nil {
+	err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), os.Getenv("HELM_DRIVER"), debug)
+	if err != nil {
 		return err
 	}
+
 	client := action.NewInstall(actionConfig)
 
 	if client.Version == "" && client.Devel {

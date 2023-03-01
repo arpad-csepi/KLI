@@ -160,7 +160,7 @@ func Verify(deploymentName string, namespace string, timeout time.Duration) erro
 		}
 		if time.Since(start) > timeout {
 			fmt.Println("\nAww. One or more resource is not ready! Please check your cluster to more info.")
-			break
+			return errors.New("resources are not ready")
 		}
 		time.Sleep(150 * time.Millisecond)
 		fmt.Print("\033[G")
