@@ -20,9 +20,11 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/repo"
 	"helm.sh/helm/v3/pkg/strvals"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/yaml"
 )
 
+var clientset kubernetes.Interface
 var settings *cli.EnvSettings = cli.New()
 
 func setSettings(namespace string, kubeconfig *string) {

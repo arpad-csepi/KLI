@@ -8,10 +8,13 @@ import (
 )
 
 func InstallHelmChart(chartUrl string, repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string) {
-	err := kubectl.CreateClient(kubeconfig)
+	clientset, err := kubectl.CreateClient(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.Clientset = clientset
+
 	isNamespaceExists, err := kubectl.IsNamespaceExists(namespace)
 	if err != nil {
 		panic(err)
@@ -48,10 +51,13 @@ func UninstallHelmChart(releaseName string, namespace string, kubeconfig *string
 }
 
 func GetDeploymentName(releaseName string, namespace string, kubeconfig *string) string {
-	err := kubectl.CreateClient(kubeconfig)
+	clientset, err := kubectl.CreateClient(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.Clientset = clientset
+
 	deploymentName, err := kubectl.GetDeploymentName(releaseName, namespace)
 	if err != nil {
 		panic(err.Error())
@@ -60,10 +66,13 @@ func GetDeploymentName(releaseName string, namespace string, kubeconfig *string)
 }
 
 func Verify(deploymentName string, namespace string, kubeconfig *string, timeout time.Duration) {
-	err := kubectl.CreateClient(kubeconfig)
+	clientset, err := kubectl.CreateClient(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.Clientset = clientset
+
 	err = kubectl.Verify(deploymentName, namespace, timeout)
 	if err != nil {
 		panic(err)
@@ -71,10 +80,13 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 }
 
 func GetAPIServerEndpoint(kubeconfig *string) string {
-	err := kubectl.CreateClient(kubeconfig)
+	clientset, err := kubectl.CreateClient(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.Clientset = clientset
+
 	endpoint, err := kubectl.GetAPIServerEndpoint()
 	if err != nil {
 		panic(err)

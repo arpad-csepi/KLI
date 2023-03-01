@@ -23,7 +23,7 @@ import (
 )
 
 // TODO: Can be replaced with the customClient variable?
-var clientset kubernetes.Interface
+var Clientset kubernetes.Interface
 var customClients []client.Client
 
 type clusterInfo struct {
@@ -33,17 +33,17 @@ type clusterInfo struct {
 }
 
 // CreateClient set up kubernetes clientset from the given kubeconfig and return with that
-func CreateClient(kubeconfig *string) error {
+func CreateClient(kubeconfig *string) (kubernetes.Interface, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	clientset, err = kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return clientset, nil
 }
 
 // createCustomClient set up kubernetes REST client which scheme contains custom kubernetes types from banzaicloud and cisco-open
@@ -101,7 +101,7 @@ func CreateNamespace(namespace string) error {
 		},
 	}
 
-	_, err := clientset.CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
+	_, err := Clientset.CoreV1().Namespaces().Create(context.Background(), nsName, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func CreateNamespace(namespace string) error {
 }
 
 func GetNamespace(namespace string) (*corev1.Namespace, error) {
-	ns, err := clientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	ns, err := Clientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func GetNamespace(namespace string) (*corev1.Namespace, error) {
 }
 
 func DeleteNamespace(namespace string) error {
-	err := clientset.CoreV1().Namespaces().Delete(context.Background(), namespace, metav1.DeleteOptions{})
+	err := Clientset.CoreV1().Namespaces().Delete(context.Background(), namespace, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func DeleteNamespace(namespace string) error {
 
 // IsNamespaceExists check the given namespace is exists already or not
 func IsNamespaceExists(namespace string) (bool, error) {
-	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+	namespaces, err := Clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -150,7 +150,7 @@ func Verify(deploymentName string, namespace string, timeout time.Duration) erro
 
 	for start := time.Now(); ; {
 		fmt.Printf("Verifing the %s deployment: [%s]", deploymentName, animation[frame])
-		deployment, err := clientset.AppsV1().Deployments(namespace).Get(context.TODO(), deploymentName, metav1.GetOptions{})
+		deployment, err := Clientset.AppsV1().Deployments(namespace).Get(context.TODO(), deploymentName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -215,12 +215,12 @@ func Remove(CRDpath string) error {
 // GetAPIServerEndpoint is return with the API endpoint URL address
 // BUG: Some RESTClient problem, cannot get the url in test
 func GetAPIServerEndpoint() (string, error) {
-	return clientset.Discovery().RESTClient().Get().URL().String(), nil
+	return Clientset.Discovery().RESTClient().Get().URL().String(), nil
 }
 
 // GetDeploymentName is search the deployment name based on the chart release name
 func GetDeploymentName(releaseName string, namespace string) (string, error) {
-	deployments, err := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
+	deployments, err := Clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return "", err
 	}
