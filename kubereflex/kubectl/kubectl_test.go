@@ -7,15 +7,22 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	testclient "k8s.io/client-go/kubernetes/fake"
+	fakeclient "k8s.io/client-go/kubernetes/fake"
 )
 
 var namespaceTestName string = "namespace-for-testing"
 var deploymentTestName = "deployment-for-testing"
 
 func createTestClient() {
-	Clientset = testclient.NewSimpleClientset()
+	// // runtimeScheme contains already registered types in the API server
+	// runtimeScheme := scheme.Scheme
 
+	// // Add custom types to the runtime scheme
+	// istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
+	// cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
+
+	Clientset = fakeclient.NewSimpleClientset()
+	
 	// // runtimeScheme contains already registered types in the API server
 	// runtimeScheme := scheme.Scheme
 
@@ -83,12 +90,12 @@ func TestVerify(t *testing.T) {
 
 	deploymentData := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        deploymentTestName,
-			Namespace:   namespaceTestName,
+			Name:      deploymentTestName,
+			Namespace: namespaceTestName,
 		},
-		Status:     appsv1.DeploymentStatus{
-			Replicas:            3,
-			ReadyReplicas:       3,
+		Status: appsv1.DeploymentStatus{
+			Replicas:      3,
+			ReadyReplicas: 3,
 		},
 	}
 
@@ -184,11 +191,6 @@ func TestDetach(t *testing.T) {
 
 func TestGetClusterInfo(t *testing.T) {
 	// objectKey := client.ObjectKey{Namespace: "cluster-registry", Name: "demo-active"}
-
-	// restClient, err := createCustomClient(objectKey.Namespace)
-	// if err != nil {
-	// 	t.Error(err)
-	// }
 
 	// clusterInfo, err := getClusterInfo(restClient, objectKey)
 	// if err != nil {

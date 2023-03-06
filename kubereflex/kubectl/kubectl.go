@@ -214,6 +214,7 @@ func Remove(CRDpath string) error {
 
 // GetAPIServerEndpoint is return with the API endpoint URL address
 // BUG: Some RESTClient problem, cannot get the url in test
+// TODO: Do check for non-valid values
 func GetAPIServerEndpoint() (string, error) {
 	return Clientset.Discovery().RESTClient().Get().URL().String(), nil
 }
