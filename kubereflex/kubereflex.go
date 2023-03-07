@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/arpad-csepi/KLI/kubereflex/helm"
+	"github.com/arpad-csepi/KLI/kubereflex/io"
 	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
 )
 
@@ -94,23 +95,35 @@ func GetAPIServerEndpoint(kubeconfig *string) string {
 	return endpoint
 }
 
-func Apply(CRDpath string, kubeconfig *string) {
+func Apply(CRDPath string, kubeconfig *string) {
 	err := kubectl.CreateCustomClient(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
-	err = kubectl.Apply(CRDpath)
+
+	CRObject, err := io.ReadYAMLResourceFile(CRDPath)
+	if err != nil {
+		panic(err)
+	}
+
+	err = kubectl.Apply(CRObject)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func Remove(CRDpath string, kubeconfig *string) {
+func Remove(CRDPath string, kubeconfig *string) {
 	err := kubectl.CreateCustomClient(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
-	err = kubectl.Remove(CRDpath)
+
+	CRObject, err := io.ReadYAMLResourceFile(CRDPath)
+	if err != nil {
+		panic(err)
+	}
+
+	err = kubectl.Remove(CRObject)
 	if err != nil {
 		panic(err)
 	}

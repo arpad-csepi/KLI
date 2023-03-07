@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/arpad-csepi/KLI/kubereflex/io"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
@@ -175,35 +173,27 @@ func Verify(deploymentName string, namespace string, timeout time.Duration) erro
 }
 
 // Apply is read the custom resource definition and apply it with custom REST client
-func Apply(CRDPath string) error {
-	fmt.Printf("Apply %s resource file\n", CRDPath)
-	CRD, err := io.ReadYAMLResourceFile(CRDPath)
+func Apply(CRObject client.Object) error {
+	fmt.Printf("Apply %s resource file\n", CRObject.GetName())
+
+	customClients[0] = client.NewNamespacedClient(customClients[0], CRObject.GetNamespace())
+
+	err := customClients[0].Create(context.TODO(), CRObject)
 	if err != nil {
 		return err
 	}
-
-	customClients[0] = client.NewNamespacedClient(customClients[0], CRD.GetNamespace())
-
-	err = customClients[0].Create(context.TODO(), CRD)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Yep, %s resource applied\n", CRD.GetName())
+	fmt.Printf("Yep, %s resource applied\n", CRObject.GetName())
 
 	return nil
 }
 
 // Remove is read the custom resource definition and remove it with custom REST client
-func Remove(CRDpath string) error {
-	fmt.Printf("Remove resource based on %s\n", CRDpath)
-	CRD, err := io.ReadYAMLResourceFile(CRDpath)
-	if err != nil {
-		return err
-	}
+func Remove(CRObject client.Object) error {
+	fmt.Printf("Remove resource based on %s\n", CRObject.GetName())
 
-	customClients[0] = client.NewNamespacedClient(customClients[0], CRD.GetNamespace())
+	customClients[0] = client.NewNamespacedClient(customClients[0], CRObject.GetNamespace())
 
-	err = customClients[0].DeleteAllOf(context.TODO(), CRD)
+	err := customClients[0].DeleteAllOf(context.TODO(), CRObject)
 	if err != nil {
 		return err
 	}
