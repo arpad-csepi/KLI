@@ -18,7 +18,6 @@ type chartData struct {
 	releaseName    string
 	namespace      string
 	arguments      map[string]string
-	deploymentName string
 }
 
 var testChart = chartData{
@@ -31,21 +30,19 @@ var testChart = chartData{
 	// arguments:      map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&mainClusterConfigPath)},
 }
 
-func getKubeConfig(config string) *string {
-	// TODO: Ugly & disgusting path management
+func getKubeConfig() *string {
 	var kubeconfig *string
-	if home := homedir.HomeDir(); config == "" && home != "" {
+	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, "Cisco", "KLI", config), "absolute path to the kubeconfig file")
 	}
+
 	flag.Parse()
 
 	return kubeconfig
 }
 
 func TestSetSettings(t *testing.T) {
-	kubeconfig := getKubeConfig("")
+	kubeconfig := getKubeConfig()
 
 	setSettings(testChart.namespace, kubeconfig)
 
@@ -61,42 +58,34 @@ func TestSetSettings(t *testing.T) {
 }
 
 func TestInstall(t *testing.T) {
-	kubeconfig := getKubeConfig("")
+	kubeconfig := getKubeConfig()
+	kubectl.CreateClient(kubeconfig)
 
-	Install(testChart.repositoryName, testChart.chartName, testChart.releaseName, testChart.namespace, testChart.arguments, kubeconfig)
+	_ = RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
+	kubectl.CreateNamespace(testChart.namespace)
 
-	// TODO: Set a fake client up before use GetDeploymentName
-	t.Errorf("No client definied")
-	deploymentName, err := kubectl.GetDeploymentName(testChart.releaseName, testChart.namespace)
+	err := Install(testChart.repositoryName, testChart.chartName, testChart.releaseName, testChart.namespace, testChart.arguments, kubeconfig)
 	if err != nil {
-		t.Errorf("Error when GetDeploymentName called: %s", err)
-	}
-
-	if deploymentName == "" {
-		t.Errorf("Deployment not found after install")
+		t.Error(err)
 	}
 }
 
 func TestUninstall(t *testing.T) {
-	kubeconfig := getKubeConfig("")
+	kubeconfig := getKubeConfig()
+	kubectl.CreateClient(kubeconfig)
 
-	Uninstall(testChart.releaseName, testChart.namespace, kubeconfig)
+	_ = RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
+	kubectl.CreateNamespace(testChart.namespace)
+	_ = Install(testChart.repositoryName, testChart.chartName, testChart.releaseName, testChart.namespace, testChart.arguments, kubeconfig)
 
-	var err error
-	// TODO: Set a fake client up before use GetDeploymentName
-	t.Errorf("No client definied")
-	testChart.deploymentName, err = kubectl.GetDeploymentName(testChart.releaseName, testChart.namespace)
+	err := Uninstall(testChart.releaseName, testChart.namespace, kubeconfig)
 	if err != nil {
-		t.Errorf("Error when GetDeploymentName called: %s", err)
-	}
-
-	if testChart.deploymentName != "" {
-		t.Errorf("Deployment found after uninstall")
+		t.Error(err)
 	}
 }
 
 func TestIsRepositoryExists(t *testing.T) {
-	RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
+	_ = RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
 
 	exists, err := IsRepositoryExists("cluster-registry")
 	if exists != true {

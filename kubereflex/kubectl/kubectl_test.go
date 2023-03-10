@@ -1,50 +1,71 @@
 package kubectl
 
 import (
-	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"k8s.io/client-go/util/homedir"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	fakeclient "k8s.io/client-go/kubernetes/fake"
+
+	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
+	"github.com/arpad-csepi/KLI/kubereflex/io"
 )
 
-var namespaceTestName string = "namespace-for-testing"
-var deploymentTestName = "deployment-for-testing"
+var testNamespaceName string = "namespace-for-testing"
+var testDeploymentName = "deployment-for-testing"
+var testDeploymentReleaseName = "release-name-for-testing"
+var testDeploymentAnnotations = map[string]string{"deploymentTestReleaseName": testDeploymentReleaseName}
+
+var objectKey1 = client.ObjectKey{Namespace: testNamespaceName, Name: "demo-active"}
+
+// var objectKey2 = client.ObjectKey{Namespace: testNamespaceName, Name: "demo-passive"}
+
+var testContainer = &corev1.Container{
+	Name:  "test-container",
+	Image: "k8s.gcr.io/test-webserver",
+}
+
+var testDeployment = appsv1.Deployment{
+	TypeMeta:   metav1.TypeMeta{},
+	ObjectMeta: metav1.ObjectMeta{Name: testDeploymentName, Namespace: testNamespaceName, Annotations: testDeploymentAnnotations},
+	Spec: appsv1.DeploymentSpec{
+		Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": testDeploymentName}},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{Name: testNamespaceName, Namespace: testNamespaceName, Labels: map[string]string{"app": testDeploymentName}},
+			Spec:       corev1.PodSpec{Containers: []corev1.Container{*testContainer}}},
+	},
+	Status: appsv1.DeploymentStatus{Replicas: 3, ReadyReplicas: 3},
+}
 
 func createTestClient() {
-	// // runtimeScheme contains already registered types in the API server
-	// runtimeScheme := scheme.Scheme
+	var err error
+	var kubeconfig string
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfig = filepath.Join(home, ".kube", "config")
+	}
 
-	// // Add custom types to the runtime scheme
-	// istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
-	// cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
+	err = CreateClient(&kubeconfig)
 
-	Clientset = fakeclient.NewSimpleClientset()
-	
-	// // runtimeScheme contains already registered types in the API server
-	// runtimeScheme := scheme.Scheme
+	if err != nil {
+		panic(err)
+	}
 
-	// // Add custom types to the runtime scheme
-	// err := istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
-	// if err != nil {
-	// 	panic("Testclient add to scheme failed")
-	// }
-
-	// err = cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
-	// if err != nil {
-	// 	panic("Testclient add to scheme failed")
-	// }
-
-	// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
-	// mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(client.Discovery()))
+	backupClusterState()
 }
+
+func backupClusterState() {}
+
+func restoreClusterState() {}
 
 func TestCreateNamespace(t *testing.T) {
 	createTestClient()
 
-	err := CreateNamespace(namespaceTestName)
+	err := CreateNamespace(testNamespaceName)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -53,34 +74,40 @@ func TestCreateNamespace(t *testing.T) {
 func TestGetNamespace(t *testing.T) {
 	createTestClient()
 
-	_ = CreateNamespace(namespaceTestName)
+	_ = CreateNamespace(testNamespaceName)
 
-	namespace, err := GetNamespace(namespaceTestName)
-	if err != nil || namespace == nil {
+	namespace, err := GetNamespace(testNamespaceName)
+	if err != nil || namespace == nil || namespace.Name != testNamespaceName {
 		t.Error(err.Error())
 	}
+
+	restoreClusterState()
 }
 
 func TestDeleteNamespace(t *testing.T) {
 	createTestClient()
 
-	_ = CreateNamespace(namespaceTestName)
+	_ = CreateNamespace(testNamespaceName)
 
-	err := DeleteNamespace(namespaceTestName)
+	err := DeleteNamespace(testNamespaceName)
 	if err != nil {
 		t.Error(err.Error())
 	}
+
+	restoreClusterState()
 }
 
 func TestIsNamespaceExists(t *testing.T) {
 	createTestClient()
 
-	_ = CreateNamespace(namespaceTestName)
+	_ = CreateNamespace(testNamespaceName)
 
-	exists, err := IsNamespaceExists(namespaceTestName)
+	exists, err := IsNamespaceExists(testNamespaceName)
 	if err != nil || exists != true {
 		t.Error(err.Error())
 	}
+
+	restoreClusterState()
 }
 
 func TestVerify(t *testing.T) {
@@ -88,59 +115,42 @@ func TestVerify(t *testing.T) {
 
 	testTimeout := 2 * time.Second
 
-	deploymentData := appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploymentTestName,
-			Namespace: namespaceTestName,
-		},
-		Status: appsv1.DeploymentStatus{
-			Replicas:      3,
-			ReadyReplicas: 3,
-		},
-	}
+	_ = Apply(&testDeployment)
 
-	_, err := Clientset.AppsV1().Deployments(namespaceTestName).Create(context.TODO(),
-		&deploymentData, metav1.CreateOptions{})
+	err := Verify(testDeploymentName, testNamespaceName, testTimeout)
 	if err != nil {
 		t.Error(err.Error())
 	}
 
-	err = Verify(deploymentTestName, namespaceTestName, testTimeout)
-	if err != nil {
-		t.Error(err.Error())
-	}
+	restoreClusterState()
 }
 
 func TestApply(t *testing.T) {
-	t.Fail()
+	createTestClient()
+
+	_ = CreateNamespace(testNamespaceName)
+
+	err := Apply(&testDeployment)
+	if err != nil {
+		t.Error(err)
+	}
+
+	restoreClusterState()
 }
 
 func TestRemove(t *testing.T) {
-	// createTestClient()
+	createTestClient()
 
-	// // TODO: Ugly & disgusting
-	// CRDpath := "/home/kormi/Cisco/KLI/default_active_resource.yaml"
+	_ = CreateNamespace(testNamespaceName)
+	_ = Apply(&testDeployment)
 
-	// Apply(CRDpath)
+	err := Remove(&testDeployment)
 
-	// deploymentName, err := GetDeploymentName("icp-v115x", "istio-system")
+	if err != nil {
+		t.Error("Try to delete non-exist custom resource")
+	}
 
-	// if deploymentName == "" && err != nil {
-	// 	t.Error("Custom resource not found after apply")
-	// }
-
-	// err = Remove(CRDpath)
-
-	// if err != nil {
-	// 	t.Error("Try to delete non-exist custom resource")
-	// }
-
-	// deploymentName, err = GetDeploymentName("icp-v115x", "istio-system")
-
-	// if deploymentName != "" && err == nil {
-	// 	t.Error("Custom resource not removed after delete")
-	// }
-	t.Fail()
+	restoreClusterState()
 }
 
 func TestAPIServerEndpoint(t *testing.T) {
@@ -150,58 +160,79 @@ func TestAPIServerEndpoint(t *testing.T) {
 	if err != nil || endpoint == "" {
 		t.Error(err.Error())
 	}
+
+	restoreClusterState()
 }
 
 func TestGetDeploymentName(t *testing.T) {
 	createTestClient()
 
-	deploymentTestReleaseName := "annotation-for-testing"
-	deploymentTestAnnotations := map[string]string{"deploymentTestReleaseName": deploymentTestReleaseName}
+	_ = CreateNamespace(testNamespaceName)
+	_ = Apply(&testDeployment)
 
-	deploymentData := appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        deploymentTestName,
-			Namespace:   namespaceTestName,
-			Annotations: deploymentTestAnnotations,
-		},
-	}
-
-	_, err := Clientset.AppsV1().Deployments(namespaceTestName).Create(context.TODO(), &deploymentData, metav1.CreateOptions{})
+	deploymentName, err := GetDeploymentName(testDeploymentReleaseName, testNamespaceName)
 	if err != nil {
 		t.Error(err.Error())
 	}
 
-	deploymentName, err := GetDeploymentName(deploymentTestReleaseName, namespaceTestName)
-	if err != nil {
-		t.Error(err.Error())
-	}
-
-	if deploymentTestName != deploymentName {
+	if testDeploymentName != deploymentName {
 		t.Error("Deployment name is wrong!")
 	}
+
+	restoreClusterState()
 }
 
 func TestAttach(t *testing.T) {
 	// Install before attach
+
+	restoreClusterState()
+	t.Fail()
 }
 
 func TestDetach(t *testing.T) {
 	// Install and attach before detach
+
+	restoreClusterState()
+	t.Fail()
 }
 
 func TestGetClusterInfo(t *testing.T) {
-	// objectKey := client.ObjectKey{Namespace: "cluster-registry", Name: "demo-active"}
+	createTestClient()
+	Clients[0].client = client.NewNamespacedClient(Clients[0].client, testNamespaceName)
 
-	// clusterInfo, err := getClusterInfo(restClient, objectKey)
-	// if err != nil {
-	// 	t.Error(err)
-	// }
+	secret1 := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      objectKey1.Name,
+			Namespace: objectKey1.Namespace,
+		},
+	}
 
-	// if clusterInfo.secret.CreationTimestamp.IsZero() {
-	// 	t.Error("Failed to get secret")
-	// }
-	// if clusterInfo.cluster.CreationTimestamp.IsZero() {
-	// 	t.Error("Failed to get cluster")
-	// }
-	t.Fail()
+	cluster1 := &cluster_registry.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      objectKey1.Name,
+			Namespace: objectKey1.Namespace,
+		},
+	}
+
+	url := "https://raw.githubusercontent.com/cisco-open/cluster-registry-controller/cb563ec383a6a98f8d8e5c79d3350997b7e70075/deploy/charts/cluster-registry/crds/clusterregistry.k8s.cisco.com_clusters.yaml"
+	clusterCRD, err := io.GetClusterCRD(url)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_ = CreateNamespace(testNamespaceName)
+	_ = Apply(secret1)
+	_ = Apply(clusterCRD)
+	_ = Apply(cluster1)
+
+	clusterInfo, err := getClusterInfo(Clients[0].client, objectKey1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if clusterInfo.secret.Name != secret1.Name || clusterInfo.cluster.Name != cluster1.Name {
+		t.Error("wrong resource name")
+	}
+
+	restoreClusterState()
 }

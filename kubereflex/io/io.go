@@ -1,9 +1,13 @@
 package io
 
 import (
+	"errors"
+	"io/ioutil"
+	"net/http"
 	"os"
 
 	istio_operator "github.com/banzaicloud/istio-operator/api/v2/v1alpha1"
+	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -31,4 +35,38 @@ func ReadYAMLResourceFile(path string) (client.Object, error) {
 		return nil, err
 	}
 	return icp.DeepCopy(), nil
+}
+
+func GetClusterCRD(url string) (client.Object, error) {
+	yamlData, err := fileDownload(url)
+	if err != nil {
+		return nil, err
+	}
+
+	var clusterCRD cluster_registry.Cluster
+	err = yaml.Unmarshal(yamlData, &clusterCRD)
+
+	if err != nil {
+		return nil, err
+	}
+	return &clusterCRD, nil
+}
+
+func fileDownload(url string) ([]byte, error) {
+	response, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return nil, errors.New("wrong http status code")
+	}
+
+	content, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return content, nil
 }
