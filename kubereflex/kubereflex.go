@@ -75,18 +75,16 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, timeout
 }
 
 func GetAPIServerEndpoint(kubeconfig *string) string {
-	// err := kubectl.CreateClient(kubeconfig)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	err := kubectl.CreateClient(kubeconfig)
+	if err != nil {
+		panic(err)
+	}
 
-	// endpoint, err := kubectl.GetAPIServerEndpoint()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// return endpoint
-
-	return "todo"
+	endpoint, err := kubectl.GetAPIServerEndpoint()
+	if err != nil {
+		panic(err)
+	}
+	return endpoint
 }
 
 func Apply(CRDPath string, kubeconfig *string) {

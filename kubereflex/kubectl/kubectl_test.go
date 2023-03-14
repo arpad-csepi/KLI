@@ -22,7 +22,6 @@ var testDeploymentReleaseName = "release-name-for-testing"
 var testDeploymentAnnotations = map[string]string{"deploymentTestReleaseName": testDeploymentReleaseName}
 
 var objectKey1 = client.ObjectKey{Namespace: testNamespaceName, Name: "demo-active"}
-
 // var objectKey2 = client.ObjectKey{Namespace: testNamespaceName, Name: "demo-passive"}
 
 var testContainer = &corev1.Container{
@@ -198,7 +197,7 @@ func TestDetach(t *testing.T) {
 
 func TestGetClusterInfo(t *testing.T) {
 	createTestClient()
-	Clients[0].client = client.NewNamespacedClient(Clients[0].client, testNamespaceName)
+	_ = CreateNamespace(testNamespaceName)
 
 	secret1 := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -220,12 +219,13 @@ func TestGetClusterInfo(t *testing.T) {
 		t.Error(err)
 	}
 
-	_ = CreateNamespace(testNamespaceName)
-	_ = Apply(secret1)
+	
 	_ = Apply(clusterCRD)
+	_ = Apply(secret1)
 	_ = Apply(cluster1)
 
-	clusterInfo, err := getClusterInfo(Clients[0].client, objectKey1)
+	NamespacedClient := client.NewNamespacedClient(Clients[0].client, testNamespaceName)
+	clusterInfo, err := getClusterInfo(NamespacedClient, objectKey1)
 	if err != nil {
 		t.Error(err)
 	}

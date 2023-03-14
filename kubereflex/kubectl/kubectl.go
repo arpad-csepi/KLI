@@ -197,11 +197,11 @@ func Verify(deploymentName string, namespace string, timeout time.Duration) erro
 
 // Apply is read the custom resource definition and apply it with custom REST client
 func Apply(CRObject client.Object) error {
-	fmt.Printf("Apply %s resource file\n", CRObject.GetName())
+	fmt.Printf("Apply %s resource file to %s namespace\n", CRObject.GetName(), CRObject.GetNamespace())
+	
+	NamespacedClient := client.NewNamespacedClient(Clients[0].client, CRObject.GetNamespace())
 
-	Clients[0].client = client.NewNamespacedClient(Clients[0].client, CRObject.GetNamespace())
-
-	err := Clients[0].client.Create(context.TODO(), CRObject)
+	err := NamespacedClient.Create(context.TODO(), CRObject)
 	if err != nil {
 		return err
 	}
@@ -214,9 +214,9 @@ func Apply(CRObject client.Object) error {
 func Remove(CRObject client.Object) error {
 	fmt.Printf("Remove resource based on %s\n", CRObject.GetName())
 
-	Clients[0].client = client.NewNamespacedClient(Clients[0].client, CRObject.GetNamespace())
+	NamespacedClient := client.NewNamespacedClient(Clients[0].client, CRObject.GetNamespace())
 
-	err := Clients[0].client.DeleteAllOf(context.TODO(), CRObject)
+	err := NamespacedClient.DeleteAllOf(context.TODO(), CRObject)
 	if err != nil {
 		return err
 	}
@@ -275,16 +275,16 @@ func Attach(namespace1 string, namespace2 string) error {
 	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
 	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
 
-	Clients[0].client = client.NewNamespacedClient(Clients[0].client, namespace1)
-	Clients[1].client = client.NewNamespacedClient(Clients[1].client, namespace2)
+	NamespacedClient1 := client.NewNamespacedClient(Clients[0].client, namespace1)
+	NamespacedClient2 := client.NewNamespacedClient(Clients[1].client, namespace2)
 
 	fmt.Println("Get some info from clusters")
-	cluster1Info, err := getClusterInfo(Clients[0].client, objectKey1)
+	cluster1Info, err := getClusterInfo(NamespacedClient1, objectKey1)
 	if err != nil {
 		return err
 	}
 
-	cluster2Info, err := getClusterInfo(Clients[1].client, objectKey2)
+	cluster2Info, err := getClusterInfo(NamespacedClient2, objectKey2)
 	if err != nil {
 		return err
 	}
@@ -306,20 +306,20 @@ func Detach(namespace1 string, namespace2 string) error {
 	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
 	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
 
-	Clients[0].client = client.NewNamespacedClient(Clients[0].client, namespace1)
-	Clients[1].client = client.NewNamespacedClient(Clients[1].client, namespace2)
+	NamespacedClient1 := client.NewNamespacedClient(Clients[0].client, namespace1)
+	NamespacedClient2 := client.NewNamespacedClient(Clients[1].client, namespace2)
 
 	fmt.Println("Get clusters and secrets info, please wait...")
 
 	//TODO: Make a better struct for more compact code
-	cluster1Info, err1 := getClusterInfo(Clients[0].client, objectKey1)
+	cluster1Info, err1 := getClusterInfo(NamespacedClient1, objectKey1)
 	if err1 != nil {
 		fmt.Printf("%s not here on the main cluster.\n", objectKey1.Name)
 	} else {
 		delete(cluster1Info.restClient, &cluster1Info.cluster)
 		delete(cluster1Info.restClient, &cluster1Info.secret)
 	}
-	cluster1Info2, err2 := getClusterInfo(Clients[0].client, objectKey2)
+	cluster1Info2, err2 := getClusterInfo(NamespacedClient1, objectKey2)
 	if err2 != nil {
 		fmt.Printf("%s not here on the main cluster.\n", objectKey2.Name)
 	} else {
@@ -327,14 +327,14 @@ func Detach(namespace1 string, namespace2 string) error {
 		delete(cluster1Info2.restClient, &cluster1Info2.secret)
 	}
 
-	cluster2Info, err3 := getClusterInfo(Clients[1].client, objectKey1)
+	cluster2Info, err3 := getClusterInfo(NamespacedClient2, objectKey1)
 	if err3 != nil {
 		fmt.Printf("%s not here on the secondary cluster.\n", objectKey1.Name)
 	} else {
 		delete(cluster2Info.restClient, &cluster2Info.cluster)
 		delete(cluster2Info.restClient, &cluster2Info.secret)
 	}
-	cluster2Info2, err4 := getClusterInfo(Clients[1].client, objectKey2)
+	cluster2Info2, err4 := getClusterInfo(NamespacedClient2, objectKey2)
 	if err4 != nil {
 		fmt.Printf("%s not here on the secondary cluster.\n", objectKey2.Name)
 	} else {
