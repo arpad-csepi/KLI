@@ -41,22 +41,30 @@ var installCmd = &cobra.Command{
 			chartName:      "cluster-registry",
 			releaseName:    "cluster-registry",
 			namespace:      "cluster-registry",
-			arguments:      map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&mainClusterConfigPath)},
+			arguments:      map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&mainClusterConfigPath, "TODO")},
 		}
-		
+
 		kubereflex.InstallHelmChart(clusterRegistry1.chartUrl,
 			clusterRegistry1.repositoryName,
 			clusterRegistry1.chartName,
 			clusterRegistry1.releaseName,
 			clusterRegistry1.namespace,
 			clusterRegistry1.arguments,
-			&mainClusterConfigPath)
+			&mainClusterConfigPath,
+			"TODO")
 
-		clusterRegistry1.deploymentName = kubereflex.GetDeploymentName(clusterRegistry1.releaseName, clusterRegistry1.namespace, &mainClusterConfigPath)
+		clusterRegistry1.deploymentName = kubereflex.GetDeploymentName(clusterRegistry1.releaseName,
+			clusterRegistry1.namespace,
+			&mainClusterConfigPath,
+			"TODO")
 
 		if verify {
-			kubereflex.Verify(clusterRegistry1.deploymentName, clusterRegistry1.namespace, &mainClusterConfigPath, time.Duration(timeout)*time.Second)
-		}		
+			kubereflex.Verify(clusterRegistry1.deploymentName,
+				clusterRegistry1.namespace,
+				&mainClusterConfigPath,
+				"TODO",
+				time.Duration(timeout)*time.Second)
+		}
 
 		if secondaryClusterConfigPath != "" {
 			clusterRegistry2 := chartData{
@@ -65,7 +73,7 @@ var installCmd = &cobra.Command{
 				chartName:      "cluster-registry",
 				releaseName:    "cluster-registry",
 				namespace:      "cluster-registry",
-				arguments:      map[string]string{"set": "localCluster.name=demo-passive,network.name=network2,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&secondaryClusterConfigPath)},
+				arguments:      map[string]string{"set": "localCluster.name=demo-passive,network.name=network2,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&secondaryClusterConfigPath, "TODO")},
 			}
 
 			kubereflex.InstallHelmChart(clusterRegistry2.chartUrl,
@@ -74,17 +82,25 @@ var installCmd = &cobra.Command{
 				clusterRegistry2.releaseName,
 				clusterRegistry2.namespace,
 				clusterRegistry2.arguments,
-				&secondaryClusterConfigPath)
-			
-			clusterRegistry2.deploymentName = kubereflex.GetDeploymentName(clusterRegistry2.releaseName, clusterRegistry2.namespace, &secondaryClusterConfigPath)
+				&secondaryClusterConfigPath,
+				"TODO")
+
+			clusterRegistry2.deploymentName = kubereflex.GetDeploymentName(clusterRegistry2.releaseName,
+				clusterRegistry2.namespace,
+				&secondaryClusterConfigPath,
+				"TODO")
 
 			if verify {
-				kubereflex.Verify(clusterRegistry2.deploymentName, clusterRegistry2.namespace, &secondaryClusterConfigPath, time.Duration(timeout)*time.Second)
+				kubereflex.Verify(clusterRegistry2.deploymentName,
+					clusterRegistry2.namespace,
+					&secondaryClusterConfigPath,
+					"TODO",
+					time.Duration(timeout)*time.Second)
 			}
 		}
 
 		if attach {
-			kubereflex.Attach(&mainClusterConfigPath, &secondaryClusterConfigPath, "cluster-registry", "cluster-registry")
+			kubereflex.Attach(&mainClusterConfigPath, "TODO1", &secondaryClusterConfigPath, "TODO2", "cluster-registry", "cluster-registry")
 		}
 
 		istioOperator := chartData{
@@ -102,16 +118,24 @@ var installCmd = &cobra.Command{
 			istioOperator.releaseName,
 			istioOperator.namespace,
 			istioOperator.arguments,
-			&mainClusterConfigPath)
+			&mainClusterConfigPath,
+			"TODO")
 
-		istioOperator.deploymentName = kubereflex.GetDeploymentName(istioOperator.releaseName, istioOperator.namespace, &mainClusterConfigPath)
+		istioOperator.deploymentName = kubereflex.GetDeploymentName(istioOperator.releaseName,
+			istioOperator.namespace,
+			&mainClusterConfigPath,
+			"TODO")
 
 		if verify {
-			kubereflex.Verify(istioOperator.deploymentName, istioOperator.namespace, &mainClusterConfigPath, time.Duration(timeout)*time.Second)
+			kubereflex.Verify(istioOperator.deploymentName,
+				istioOperator.namespace,
+				&mainClusterConfigPath,
+				"TODO",
+				time.Duration(timeout)*time.Second)
 		}
 
 		if activeCRDPath != "" {
-			kubereflex.Apply(activeCRDPath, &mainClusterConfigPath)
+			kubereflex.Apply(activeCRDPath, &mainClusterConfigPath, "TODO")
 		}
 
 		if secondaryClusterConfigPath != "" {
@@ -121,17 +145,25 @@ var installCmd = &cobra.Command{
 				istioOperator.releaseName,
 				istioOperator.namespace,
 				istioOperator.arguments,
-				&secondaryClusterConfigPath)
+				&secondaryClusterConfigPath,
+				"TODO")
 
-			istioOperator.deploymentName = kubereflex.GetDeploymentName(istioOperator.releaseName, istioOperator.namespace, &secondaryClusterConfigPath)
+			istioOperator.deploymentName = kubereflex.GetDeploymentName(istioOperator.releaseName,
+				istioOperator.namespace,
+				&secondaryClusterConfigPath,
+				"TODO")
 
 			if verify {
-				kubereflex.Verify(istioOperator.deploymentName, istioOperator.namespace, &secondaryClusterConfigPath, time.Duration(timeout)*time.Second)
+				kubereflex.Verify(istioOperator.deploymentName,
+					istioOperator.namespace,
+					&secondaryClusterConfigPath,
+					"TODO",
+					time.Duration(timeout)*time.Second)
 			}
 		}
 
 		if passiveCRDPath != "" {
-			kubereflex.Apply(passiveCRDPath, &secondaryClusterConfigPath)
+			kubereflex.Apply(passiveCRDPath, &secondaryClusterConfigPath, "TODO")
 		}
 	},
 }

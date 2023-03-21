@@ -8,7 +8,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
@@ -24,31 +24,47 @@ import (
 )
 
 type Clientset struct {
-	client client.Client
-	config *rest.Config
+	client    client.Client
+	config    *rest.Config
 	discovery *discovery.DiscoveryClient
 }
 
 type clusterInfo struct {
 	restClient client.Client
-	secret     corev1.Secret
-	cluster    cluster_registry.Cluster
+	secret     *corev1.Secret
+	cluster    *cluster_registry.Cluster
 }
 
+var ActiveClientset Clientset
 var Clients []Clientset
 
 // CreateClient set up kubernetes REST client which scheme contains custom kubernetes types from banzaicloud and cisco-open
-func CreateClient(kubeconfig ...*string) error {
-	if len(kubeconfig) == 0 {
+func CreateClient(c ...map[string]string) error {
+	if len(c) == 0 {
 		return errors.New("no kubeconfig was definied")
 	}
 
-	for i := 0; i < len(kubeconfig); i++ {
-		clientset := Clientset {}
+	for i := 0; i < len(c); i++ {
+		clientset := Clientset{}
+		var restConfig *rest.Config
+		var err error
+
+		if _, exist := c[i]["kubeconfig"]; !exist {
+			return errors.New("no kubeconfig was definied")
+		}
+
 		// REST configuration for creating custom client
-		restConfig, err := clientcmd.BuildConfigFromFlags("", *kubeconfig[i])
-		if err != nil {
-			return err
+		_, exist := c[i]["context"]
+		if exist {
+			restConfig, err = buildConfigFromFlags(c[i]["context"], c[i]["kubeconfig"])
+			if err != nil {
+				return err
+			}
+		} else {
+			restConfig, err = clientcmd.BuildConfigFromFlags("", c[i]["kubeconfig"])
+			if err != nil {
+				return err
+			}
 		}
 
 		clientset.config = restConfig
@@ -64,20 +80,18 @@ func CreateClient(kubeconfig ...*string) error {
 		// runtimeScheme contains already registered types in the API server
 		runtimeScheme := scheme.Scheme
 
-		apiextensions.AddToScheme(runtimeScheme)
+		apiextensionsv1.AddToScheme(runtimeScheme)
 		appsv1.AddToScheme(runtimeScheme)
 
 		// Add custom types to the runtime scheme
-		err = istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
-		if err != nil {
-			return err
-		}
-		err = cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
-		if err != nil {
-			return err
-		}
+		istio_operator.SchemeBuilder.AddToScheme(runtimeScheme)
+		cluster_registry.SchemeBuilder.AddToScheme(runtimeScheme)
+
 		// mapper initializes a mapping between Kind and APIVersion to a resource name and back based on the objects in a runtime.Scheme and the Kubernetes API conventions.
-		mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
+		cachedDiscoveryClient := memory.NewMemCacheClient(discoveryClient)
+		cachedDiscoveryClient.Invalidate()
+
+		mapper := restmapper.NewDeferredDiscoveryRESTMapper(cachedDiscoveryClient)
 
 		// restClient is the custom client which known the custom resource types
 		customClient, err := client.New(restConfig, client.Options{Scheme: runtimeScheme, Mapper: mapper, Opts: client.WarningHandlerOptions{}})
@@ -90,7 +104,21 @@ func CreateClient(kubeconfig ...*string) error {
 		Clients = append(Clients, clientset)
 	}
 
+	SetActiveClientset(Clients[0])
+
 	return nil
+}
+
+func buildConfigFromFlags(context string, kubeconfigPath string) (*rest.Config, error) {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+			&clientcmd.ConfigOverrides{
+					CurrentContext: context,
+			}).ClientConfig()
+}
+
+func SetActiveClientset(newClientset Clientset) {
+	ActiveClientset = newClientset
 }
 
 // TODO: Deprecated due to helm can create namespace before install
@@ -102,7 +130,7 @@ func CreateNamespace(namespace string) error {
 		},
 	}
 
-	err := Clients[0].client.Create(context.Background(), ns, &client.CreateOptions{})
+	err := ActiveClientset.client.Create(context.Background(), ns, &client.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -116,7 +144,7 @@ func GetNamespace(namespace string) (*corev1.Namespace, error) {
 		Name: namespace,
 	}
 
-	err := Clients[0].client.Get(context.TODO(), key, ns, &client.GetOptions{})
+	err := ActiveClientset.client.Get(context.TODO(), key, ns, &client.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +158,7 @@ func DeleteNamespace(namespace string) error {
 		return err
 	}
 
-	err = Clients[0].client.Delete(context.TODO(), ns, &client.DeleteOptions{})
+	err = ActiveClientset.client.Delete(context.TODO(), ns, &client.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -142,7 +170,7 @@ func DeleteNamespace(namespace string) error {
 func IsNamespaceExists(namespace string) (bool, error) {
 	nsList := &corev1.NamespaceList{}
 
-	err := Clients[0].client.List(context.TODO(), nsList, &client.ListOptions{})
+	err := ActiveClientset.client.List(context.TODO(), nsList, &client.ListOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -170,8 +198,8 @@ func Verify(deploymentName string, namespace string, timeout time.Duration) erro
 		fmt.Printf("Verifing the %s deployment: [%s]", deploymentName, animation[frame])
 
 		deployment := &appsv1.Deployment{}
-		
-		err := Clients[0].client.Get(context.TODO(), key, deployment, &client.GetOptions{})
+
+		err := ActiveClientset.client.Get(context.TODO(), key, deployment, &client.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -198,8 +226,8 @@ func Verify(deploymentName string, namespace string, timeout time.Duration) erro
 // Apply is read the custom resource definition and apply it with custom REST client
 func Apply(CRObject client.Object) error {
 	fmt.Printf("Apply %s resource file to %s namespace\n", CRObject.GetName(), CRObject.GetNamespace())
-	
-	NamespacedClient := client.NewNamespacedClient(Clients[0].client, CRObject.GetNamespace())
+
+	NamespacedClient := client.NewNamespacedClient(ActiveClientset.client, CRObject.GetNamespace())
 
 	err := NamespacedClient.Create(context.TODO(), CRObject)
 	if err != nil {
@@ -214,7 +242,7 @@ func Apply(CRObject client.Object) error {
 func Remove(CRObject client.Object) error {
 	fmt.Printf("Remove resource based on %s\n", CRObject.GetName())
 
-	NamespacedClient := client.NewNamespacedClient(Clients[0].client, CRObject.GetNamespace())
+	NamespacedClient := client.NewNamespacedClient(ActiveClientset.client, CRObject.GetNamespace())
 
 	err := NamespacedClient.DeleteAllOf(context.TODO(), CRObject)
 	if err != nil {
@@ -228,14 +256,14 @@ func Remove(CRObject client.Object) error {
 // GetAPIServerEndpoint is return with the API endpoint URL address
 // TODO: Do check for non-valid values
 func GetAPIServerEndpoint() (string, error) {
-	endpoint := Clients[0].discovery.RESTClient().Get().URL().Host
+	endpoint := ActiveClientset.discovery.RESTClient().Get().URL().Host
 	return endpoint, nil
 }
 
 // GetDeploymentName is search the deployment name based on the chart release name
 func GetDeploymentName(releaseName string, namespace string) (string, error) {
 	deployments := &appsv1.DeploymentList{}
-	err := Clients[0].client.List(context.TODO(), deployments, &client.ListOptions{})
+	err := ActiveClientset.client.List(context.TODO(), deployments, &client.ListOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -250,22 +278,6 @@ func GetDeploymentName(releaseName string, namespace string) (string, error) {
 
 	err = errors.New("deployment not found")
 	return "", err
-}
-
-// create is create an object in the cluster with the given REST client
-func create(restClient client.Client, obj client.Object) {
-	err := restClient.Create(context.TODO(), obj)
-	if err != nil {
-		panic(err)
-	}
-}
-
-// delete is delete an object in the cluster with the given REST client
-func delete(restClient client.Client, obj client.Object) {
-	err := restClient.DeleteAllOf(context.TODO(), obj)
-	if err != nil {
-		fmt.Println(err)
-	}
 }
 
 // Attach is get the secret and cluster objects and create on the another cluster so can sync after that
@@ -290,10 +302,12 @@ func Attach(namespace1 string, namespace2 string) error {
 	}
 
 	fmt.Println("Sync resources between clusters")
-	create(cluster1Info.restClient, &cluster2Info.secret)
-	create(cluster1Info.restClient, &cluster2Info.cluster)
-	create(cluster2Info.restClient, &cluster1Info.secret)
-	create(cluster2Info.restClient, &cluster1Info.cluster)
+	SetActiveClientset(Clients[0])
+	Apply(cluster2Info.secret)
+	Apply(cluster2Info.cluster)
+	SetActiveClientset(Clients[1])
+	Apply(cluster1Info.secret)
+	Apply(cluster1Info.cluster)
 
 	fmt.Println("Attach completed!")
 	return nil
@@ -311,35 +325,37 @@ func Detach(namespace1 string, namespace2 string) error {
 
 	fmt.Println("Get clusters and secrets info, please wait...")
 
+	SetActiveClientset(Clients[0])
 	//TODO: Make a better struct for more compact code
 	cluster1Info, err1 := getClusterInfo(NamespacedClient1, objectKey1)
 	if err1 != nil {
 		fmt.Printf("%s not here on the main cluster.\n", objectKey1.Name)
 	} else {
-		delete(cluster1Info.restClient, &cluster1Info.cluster)
-		delete(cluster1Info.restClient, &cluster1Info.secret)
+		Remove(cluster1Info.cluster)
+		Remove(cluster1Info.secret)
 	}
 	cluster1Info2, err2 := getClusterInfo(NamespacedClient1, objectKey2)
 	if err2 != nil {
 		fmt.Printf("%s not here on the main cluster.\n", objectKey2.Name)
 	} else {
-		delete(cluster1Info2.restClient, &cluster1Info2.cluster)
-		delete(cluster1Info2.restClient, &cluster1Info2.secret)
+		Remove(cluster1Info2.cluster)
+		Remove(cluster1Info2.secret)
 	}
 
+	SetActiveClientset(Clients[1])
 	cluster2Info, err3 := getClusterInfo(NamespacedClient2, objectKey1)
 	if err3 != nil {
 		fmt.Printf("%s not here on the secondary cluster.\n", objectKey1.Name)
 	} else {
-		delete(cluster2Info.restClient, &cluster2Info.cluster)
-		delete(cluster2Info.restClient, &cluster2Info.secret)
+		Remove(cluster2Info.cluster)
+		Remove(cluster2Info.secret)
 	}
 	cluster2Info2, err4 := getClusterInfo(NamespacedClient2, objectKey2)
 	if err4 != nil {
 		fmt.Printf("%s not here on the secondary cluster.\n", objectKey2.Name)
 	} else {
-		delete(cluster2Info2.restClient, &cluster2Info2.cluster)
-		delete(cluster2Info2.restClient, &cluster2Info2.secret)
+		Remove(cluster2Info2.cluster)
+		Remove(cluster2Info2.secret)
 	}
 
 	fmt.Println("Cluster or secret objects are removed.\nDetach completed!")
@@ -348,19 +364,23 @@ func Detach(namespace1 string, namespace2 string) error {
 
 // getClusterInfo is return the secret and cluster object from the given REST client cluster
 func getClusterInfo(clientset client.Client, objectKey client.ObjectKey) (clusterInfo, error) {
-	var clusterInfoObj clusterInfo
+	clusterInfoObj := clusterInfo{
+		restClient: nil,
+		secret:     &corev1.Secret{},
+		cluster:    &cluster_registry.Cluster{},
+	}
 	var timeout = 3
 
 	for {
 		if clusterInfoObj.secret.CreationTimestamp.IsZero() {
-			err := clientset.Get(context.TODO(), objectKey, &clusterInfoObj.secret, &client.GetOptions{})
+			err := clientset.Get(context.TODO(), objectKey, clusterInfoObj.secret, &client.GetOptions{})
 			if err != nil {
 				return clusterInfoObj, err
 			}
 		}
 
 		if clusterInfoObj.cluster.CreationTimestamp.IsZero() {
-			err := clientset.Get(context.TODO(), objectKey, &clusterInfoObj.cluster)
+			err := clientset.Get(context.TODO(), objectKey, clusterInfoObj.cluster)
 			if err != nil {
 				return clusterInfoObj, err
 			}

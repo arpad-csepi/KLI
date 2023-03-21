@@ -7,10 +7,11 @@ import (
 	"os"
 
 	istio_operator "github.com/banzaicloud/istio-operator/api/v2/v1alpha1"
-	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 func fileRead(path string) ([]byte, error) {
@@ -43,7 +44,7 @@ func GetClusterCRD(url string) (client.Object, error) {
 		return nil, err
 	}
 
-	var clusterCRD cluster_registry.Cluster
+	var clusterCRD apiextensionsv1.CustomResourceDefinition
 	err = yaml.Unmarshal(yamlData, &clusterCRD)
 
 	if err != nil {

@@ -59,7 +59,11 @@ func TestSetSettings(t *testing.T) {
 
 func TestInstall(t *testing.T) {
 	kubeconfig := getKubeConfig()
-	kubectl.CreateClient(kubeconfig)
+	clientConfig := map[string]string {
+		"kubeconfig": *kubeconfig,
+	}
+
+	kubectl.CreateClient(clientConfig)
 
 	_ = RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
 	kubectl.CreateNamespace(testChart.namespace)
@@ -72,7 +76,11 @@ func TestInstall(t *testing.T) {
 
 func TestUninstall(t *testing.T) {
 	kubeconfig := getKubeConfig()
-	kubectl.CreateClient(kubeconfig)
+	clientConfig := map[string]string {
+		"kubeconfig": *kubeconfig,
+	}
+
+	kubectl.CreateClient(clientConfig)
 
 	_ = RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
 	kubectl.CreateNamespace(testChart.namespace)

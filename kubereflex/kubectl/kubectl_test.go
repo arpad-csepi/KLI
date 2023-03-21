@@ -12,8 +12,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
 	"github.com/arpad-csepi/KLI/kubereflex/io"
+
+	cluster_registry "github.com/cisco-open/cluster-registry-controller/api/v1alpha1"
 )
 
 var testNamespaceName string = "namespace-for-testing"
@@ -22,7 +23,31 @@ var testDeploymentReleaseName = "release-name-for-testing"
 var testDeploymentAnnotations = map[string]string{"deploymentTestReleaseName": testDeploymentReleaseName}
 
 var objectKey1 = client.ObjectKey{Namespace: testNamespaceName, Name: "demo-active"}
-// var objectKey2 = client.ObjectKey{Namespace: testNamespaceName, Name: "demo-passive"}
+var objectKey2 = client.ObjectKey{Namespace: testNamespaceName, Name: "demo-passive"}
+
+var testSecret1 = &corev1.Secret{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      objectKey1.Name,
+		Namespace: objectKey1.Namespace,
+	},
+}
+var testSecret2 = &corev1.Secret{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      objectKey2.Name,
+		Namespace: objectKey2.Namespace,
+	},
+}
+
+var testCluster1 = &cluster_registry.Cluster{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: objectKey1.Name,
+	},
+}
+var testCluster2 = &cluster_registry.Cluster{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: objectKey2.Name,
+	},
+}
 
 var testContainer = &corev1.Container{
 	Name:  "test-container",
@@ -30,13 +55,21 @@ var testContainer = &corev1.Container{
 }
 
 var testDeployment = appsv1.Deployment{
-	TypeMeta:   metav1.TypeMeta{},
-	ObjectMeta: metav1.ObjectMeta{Name: testDeploymentName, Namespace: testNamespaceName, Annotations: testDeploymentAnnotations},
+	TypeMeta: metav1.TypeMeta{},
+	ObjectMeta: metav1.ObjectMeta{
+		Name:        testDeploymentName,
+		Namespace:   testNamespaceName,
+		Annotations: testDeploymentAnnotations,
+	},
 	Spec: appsv1.DeploymentSpec{
 		Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": testDeploymentName}},
 		Template: corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{Name: testNamespaceName, Namespace: testNamespaceName, Labels: map[string]string{"app": testDeploymentName}},
-			Spec:       corev1.PodSpec{Containers: []corev1.Container{*testContainer}}},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      testNamespaceName,
+				Namespace: testNamespaceName,
+				Labels:    map[string]string{"app": testDeploymentName},
+			},
+			Spec: corev1.PodSpec{Containers: []corev1.Container{*testContainer}}},
 	},
 	Status: appsv1.DeploymentStatus{Replicas: 3, ReadyReplicas: 3},
 }
@@ -48,13 +81,37 @@ func createTestClient() {
 		kubeconfig = filepath.Join(home, ".kube", "config")
 	}
 
-	err = CreateClient(&kubeconfig)
+	clientConfig1 := map[string]string{
+		"kubeconfig": kubeconfig,
+		"context":    "kind-kind",
+	}
+	clientConfig2 := map[string]string{
+		"kubeconfig": kubeconfig,
+		"context":    "kind-kind2",
+	}
 
+	err = CreateClient(clientConfig1, clientConfig2)
 	if err != nil {
 		panic(err)
 	}
 
 	backupClusterState()
+}
+
+// BUG: clusterCRD will be overriden after first Apply. Cannot use for second Apply!
+// TODO: Should apply CRD for all clientset at once
+func appendCRD() {
+	url := "https://raw.githubusercontent.com/cisco-open/cluster-registry-controller/cb563ec383a6a98f8d8e5c79d3350997b7e70075/deploy/charts/cluster-registry/crds/clusterregistry.k8s.cisco.com_clusters.yaml"
+	clusterCRD, err := io.GetClusterCRD(url)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	_ = Apply(clusterCRD) // Need clientset mapper refresh
+
+	time.Sleep(2 * time.Second) // Wait for cluster CRD init
+	Clients = []Clientset{}     // Delete all clientset with old mapping
+	createTestClient()          // Create new clientsets with new mapping (memcache will be invalidated)
 }
 
 func backupClusterState() {}
@@ -182,47 +239,62 @@ func TestGetDeploymentName(t *testing.T) {
 }
 
 func TestAttach(t *testing.T) {
-	// Install before attach
+	createTestClient()
+	appendCRD()
+	SetActiveClientset(Clients[1])
+	appendCRD()
+
+	_ = CreateNamespace(testNamespaceName)
+	_ = Apply(testSecret1)
+	_ = Apply(testCluster1)
+
+	SetActiveClientset(Clients[1])
+
+	_ = CreateNamespace(testNamespaceName)
+	_ = Apply(testSecret2)
+	_ = Apply(testCluster2)
+
+	err := Attach(testNamespaceName, testNamespaceName)
+	if err != nil {
+		t.Error(err.Error())
+	}
 
 	restoreClusterState()
-	t.Fail()
 }
 
 func TestDetach(t *testing.T) {
-	// Install and attach before detach
+	createTestClient()
+	appendCRD()
+	SetActiveClientset(Clients[1])
+	appendCRD()
 
-	restoreClusterState()
-	t.Fail()
+	_ = CreateNamespace(testNamespaceName)
+	_ = Apply(testSecret1)
+	_ = Apply(testCluster1)
+
+	SetActiveClientset(Clients[1])
+
+	_ = CreateNamespace(testNamespaceName)
+	_ = Apply(testSecret2)
+	_ = Apply(testCluster2)
+
+	_ = Attach(testNamespaceName, testNamespaceName)
+
+	err := Detach(testNamespaceName, testNamespaceName)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	// restoreClusterState()
 }
 
 func TestGetClusterInfo(t *testing.T) {
 	createTestClient()
+	appendCRD()
+
 	_ = CreateNamespace(testNamespaceName)
-
-	secret1 := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      objectKey1.Name,
-			Namespace: objectKey1.Namespace,
-		},
-	}
-
-	cluster1 := &cluster_registry.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      objectKey1.Name,
-			Namespace: objectKey1.Namespace,
-		},
-	}
-
-	url := "https://raw.githubusercontent.com/cisco-open/cluster-registry-controller/cb563ec383a6a98f8d8e5c79d3350997b7e70075/deploy/charts/cluster-registry/crds/clusterregistry.k8s.cisco.com_clusters.yaml"
-	clusterCRD, err := io.GetClusterCRD(url)
-	if err != nil {
-		t.Error(err)
-	}
-
-	
-	_ = Apply(clusterCRD)
-	_ = Apply(secret1)
-	_ = Apply(cluster1)
+	_ = Apply(testSecret1)
+	_ = Apply(testCluster1)
 
 	NamespacedClient := client.NewNamespacedClient(Clients[0].client, testNamespaceName)
 	clusterInfo, err := getClusterInfo(NamespacedClient, objectKey1)
@@ -230,7 +302,7 @@ func TestGetClusterInfo(t *testing.T) {
 		t.Error(err)
 	}
 
-	if clusterInfo.secret.Name != secret1.Name || clusterInfo.cluster.Name != cluster1.Name {
+	if clusterInfo.secret.Name != testSecret1.Name || clusterInfo.cluster.Name != testCluster1.Name {
 		t.Error("wrong resource name")
 	}
 
