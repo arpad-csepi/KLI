@@ -8,7 +8,6 @@ import (
 func TestReadYAMLResourceFile(t *testing.T) {
 	yaml_content := "kind: IstioControlPlane\nmetadata:\n  name: icp-v115x\n  namespace: istio-system"
 
-
 	err := os.WriteFile("test_resource.yaml", []byte(yaml_content), 0755)
     if err != nil {
         t.Errorf("Unable to write file: %v", err)

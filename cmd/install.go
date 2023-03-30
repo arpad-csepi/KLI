@@ -35,6 +35,8 @@ var installCmd = &cobra.Command{
 			mainClusterConfigPath = *getKubeConfig()
 		}
 
+		kubereflex.ChooseContextFromConfig(&mainClusterConfigPath)
+
 		clusterRegistry1 := chartData{
 			chartUrl:       "https://cisco-open.github.io/cluster-registry-controller",
 			repositoryName: "cluster-registry",

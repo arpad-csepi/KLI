@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
+	api "github.com/kubernetes-client/go/kubernetes/config/api"
 )
 
 func fileRead(path string) ([]byte, error) {
@@ -36,6 +38,36 @@ func ReadYAMLResourceFile(path string) (client.Object, error) {
 		return nil, err
 	}
 	return icp.DeepCopy(), nil
+}
+
+func loadConfig(path string) (*api.Config, error) {
+	data, err := fileRead(path)
+	if err != nil {
+		return nil, err
+	}
+
+	c := api.Config{}
+
+	err = yaml.Unmarshal(data, &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return &c, nil
+}
+
+func GetContextsFromConfig(path string) ([]string, error) {
+	config, err := loadConfig(path)
+	if err != nil {
+		return nil, err
+	}
+
+	contextNameList := []string{}
+	for _, context := range config.Contexts {
+		contextNameList = append(contextNameList, context.Name)
+	}
+
+	return contextNameList, err
 }
 
 func GetClusterCRD(url string) (client.Object, error) {

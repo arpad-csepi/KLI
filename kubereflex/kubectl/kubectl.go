@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -121,7 +122,6 @@ func SetActiveClientset(newClientset Clientset) {
 	ActiveClientset = newClientset
 }
 
-// TODO: Deprecated due to helm can create namespace before install
 // CreateNamespace create namespace to provided kubeconfig kubecontext
 func CreateNamespace(namespace string) error {
 	ns := &corev1.Namespace{
@@ -254,9 +254,12 @@ func Remove(CRObject client.Object) error {
 }
 
 // GetAPIServerEndpoint is return with the API endpoint URL address
-// TODO: Do check for non-valid values
 func GetAPIServerEndpoint() (string, error) {
 	endpoint := ActiveClientset.discovery.RESTClient().Get().URL().Host
+	_, err := url.ParseRequestURI(endpoint)
+	if err != nil {
+		return "", err
+	}
 	return endpoint, nil
 }
 

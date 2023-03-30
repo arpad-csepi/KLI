@@ -18,6 +18,8 @@ var uninstallCmd = &cobra.Command{
 			mainClusterConfigPath = *getKubeConfig()
 		}
 
+		
+
 		if activeCRDPath != "" {
 			kubereflex.Remove(activeCRDPath, &mainClusterConfigPath, "TODO")
 		}

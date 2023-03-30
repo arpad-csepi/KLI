@@ -1,12 +1,36 @@
 package kubereflex
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/arpad-csepi/KLI/kubereflex/helm"
 	"github.com/arpad-csepi/KLI/kubereflex/io"
 	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
+
+	"github.com/manifoldco/promptui"
 )
+
+func ChooseContextFromConfig(kubeconfig *string) {
+	contexts, err := io.GetContextsFromConfig(*kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+
+	prompt := promptui.Select{
+		Label: "Select context for the main cluster",
+		Items: contexts,
+	}
+
+	_, result, err := prompt.Run()
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("You choose %q\n", result)
+	panic("no need to panic more")
+}
 
 func InstallHelmChart(chartUrl string, repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string, context string) {
 	clientConfig := map[string]string {
