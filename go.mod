@@ -7,26 +7,28 @@ replace github.com/golang/protobuf => github.com/luciferinlove/protobuf v0.0.0-2
 replace sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.0.0-20221117175717-91a2c2b1a489
 
 require (
-	github.com/banzaicloud/istio-operator/api/v2 v2.16.0
+	github.com/banzaicloud/istio-operator/api/v2 v2.17.0
 	github.com/gofrs/flock v0.8.1
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
 	helm.sh/helm/v3 v3.10.2
-	k8s.io/api v0.25.4
-	k8s.io/apimachinery v0.25.4
-	k8s.io/client-go v0.25.4
+	k8s.io/api v0.26.1
+	k8s.io/apimachinery v0.26.1
+	k8s.io/client-go v0.26.1
 	k8s.io/kubectl v0.25.4
-	sigs.k8s.io/controller-runtime v0.13.1
+	sigs.k8s.io/controller-runtime v0.14.6
 	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
 	emperror.dev/errors v0.8.1 // indirect
-	github.com/banzaicloud/operator-tools v0.28.8 // indirect
+	github.com/banzaicloud/operator-tools v0.28.10 // indirect
 	github.com/briandowns/spinner v1.19.0 // indirect
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/cppforlife/go-patch v0.2.0 // indirect
 	github.com/iancoleman/orderedmap v0.2.0 // indirect
+	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
@@ -90,12 +92,14 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.15.12 // indirect
+	github.com/kubernetes-client/go v0.0.0-20211217162629-92040c8d5731
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/manifoldco/promptui v0.9.0
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
@@ -138,13 +142,13 @@ require (
 	go.etcd.io/etcd/api/v3 v3.5.6 // indirect
 	go.starlark.net v0.0.0-20221201204445-3d7c6cd99570 // indirect
 	golang.org/x/crypto v0.3.0 // indirect
-	golang.org/x/net v0.2.0 // indirect
+	golang.org/x/net v0.3.1-0.20221206200815-1e63c2f08a10 // indirect
 	golang.org/x/oauth2 v0.2.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.2.0 // indirect
-	golang.org/x/term v0.2.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
-	golang.org/x/time v0.2.0 // indirect
+	golang.org/x/sys v0.3.0 // indirect
+	golang.org/x/term v0.3.0 // indirect
+	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20221201204527-e3fa12d562f3 // indirect
 	google.golang.org/grpc v1.51.0 // indirect
@@ -153,11 +157,11 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	istio.io/api v0.0.0-20221128172210-2df01fb1b9e4 // indirect
-	k8s.io/apiextensions-apiserver v0.25.4
-	k8s.io/apiserver v0.25.4 // indirect
+	istio.io/api v0.0.0-20221208070204-0528cb6ce63b // indirect
+	k8s.io/apiextensions-apiserver v0.26.1
+	k8s.io/apiserver v0.26.1 // indirect
 	k8s.io/cli-runtime v0.25.4 // indirect
-	k8s.io/component-base v0.25.4 // indirect
+	k8s.io/component-base v0.26.1 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221123214604-86e75ddd809a // indirect
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
