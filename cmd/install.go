@@ -4,6 +4,8 @@ Copyright © 2022 Árpád Csepi csepi.arpad@outlook.com
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/arpad-csepi/KLI/kubereflex"
 
 	"github.com/spf13/cobra"
@@ -35,7 +37,8 @@ var installCmd = &cobra.Command{
 			mainClusterConfigPath = *getKubeConfig()
 		}
 
-		kubereflex.ChooseContextFromConfig(&mainClusterConfigPath)
+		fmt.Println("Main cluster context switcher:")
+		mainContext = kubereflex.ChooseContextFromConfig(&mainClusterConfigPath)
 
 		clusterRegistry1 := chartData{
 			chartUrl:       "https://cisco-open.github.io/cluster-registry-controller",
@@ -43,7 +46,7 @@ var installCmd = &cobra.Command{
 			chartName:      "cluster-registry",
 			releaseName:    "cluster-registry",
 			namespace:      "cluster-registry",
-			arguments:      map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&mainClusterConfigPath, "TODO")},
+			arguments:      map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&mainClusterConfigPath, mainContext)},
 		}
 
 		kubereflex.InstallHelmChart(clusterRegistry1.chartUrl,
@@ -53,29 +56,32 @@ var installCmd = &cobra.Command{
 			clusterRegistry1.namespace,
 			clusterRegistry1.arguments,
 			&mainClusterConfigPath,
-			"TODO")
+			mainContext)
 
 		clusterRegistry1.deploymentName = kubereflex.GetDeploymentName(clusterRegistry1.releaseName,
 			clusterRegistry1.namespace,
 			&mainClusterConfigPath,
-			"TODO")
+			mainContext)
 
 		if verify {
 			kubereflex.Verify(clusterRegistry1.deploymentName,
 				clusterRegistry1.namespace,
 				&mainClusterConfigPath,
-				"TODO",
+				mainContext,
 				time.Duration(timeout)*time.Second)
 		}
 
 		if secondaryClusterConfigPath != "" {
+			fmt.Println("Secondary cluster context switcher:")
+			secondaryContext = kubereflex.ChooseContextFromConfig(&secondaryClusterConfigPath)
+
 			clusterRegistry2 := chartData{
 				chartUrl:       "https://cisco-open.github.io/cluster-registry-controller",
 				repositoryName: "cluster-registry",
 				chartName:      "cluster-registry",
 				releaseName:    "cluster-registry",
 				namespace:      "cluster-registry",
-				arguments:      map[string]string{"set": "localCluster.name=demo-passive,network.name=network2,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&secondaryClusterConfigPath, "TODO")},
+				arguments:      map[string]string{"set": "localCluster.name=demo-passive,network.name=network2,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&secondaryClusterConfigPath, secondaryContext)},
 			}
 
 			kubereflex.InstallHelmChart(clusterRegistry2.chartUrl,
@@ -85,24 +91,24 @@ var installCmd = &cobra.Command{
 				clusterRegistry2.namespace,
 				clusterRegistry2.arguments,
 				&secondaryClusterConfigPath,
-				"TODO")
+				secondaryContext)
 
 			clusterRegistry2.deploymentName = kubereflex.GetDeploymentName(clusterRegistry2.releaseName,
 				clusterRegistry2.namespace,
 				&secondaryClusterConfigPath,
-				"TODO")
+				secondaryContext)
 
 			if verify {
 				kubereflex.Verify(clusterRegistry2.deploymentName,
 					clusterRegistry2.namespace,
 					&secondaryClusterConfigPath,
-					"TODO",
+					secondaryContext,
 					time.Duration(timeout)*time.Second)
 			}
 		}
 
 		if attach {
-			kubereflex.Attach(&mainClusterConfigPath, "TODO1", &secondaryClusterConfigPath, "TODO2", "cluster-registry", "cluster-registry")
+			kubereflex.Attach(&mainClusterConfigPath, mainContext, &secondaryClusterConfigPath, secondaryContext, "cluster-registry", "cluster-registry")
 		}
 
 		istioOperator := chartData{
@@ -121,23 +127,23 @@ var installCmd = &cobra.Command{
 			istioOperator.namespace,
 			istioOperator.arguments,
 			&mainClusterConfigPath,
-			"TODO")
+			mainContext)
 
 		istioOperator.deploymentName = kubereflex.GetDeploymentName(istioOperator.releaseName,
 			istioOperator.namespace,
 			&mainClusterConfigPath,
-			"TODO")
+			mainContext)
 
 		if verify {
 			kubereflex.Verify(istioOperator.deploymentName,
 				istioOperator.namespace,
 				&mainClusterConfigPath,
-				"TODO",
+				mainContext,
 				time.Duration(timeout)*time.Second)
 		}
 
 		if activeCRDPath != "" {
-			kubereflex.Apply(activeCRDPath, &mainClusterConfigPath, "TODO")
+			kubereflex.Apply(activeCRDPath, &mainClusterConfigPath, mainContext)
 		}
 
 		if secondaryClusterConfigPath != "" {
@@ -148,24 +154,24 @@ var installCmd = &cobra.Command{
 				istioOperator.namespace,
 				istioOperator.arguments,
 				&secondaryClusterConfigPath,
-				"TODO")
+				secondaryContext)
 
 			istioOperator.deploymentName = kubereflex.GetDeploymentName(istioOperator.releaseName,
 				istioOperator.namespace,
 				&secondaryClusterConfigPath,
-				"TODO")
+				secondaryContext)
 
 			if verify {
 				kubereflex.Verify(istioOperator.deploymentName,
 					istioOperator.namespace,
 					&secondaryClusterConfigPath,
-					"TODO",
+					secondaryContext,
 					time.Duration(timeout)*time.Second)
 			}
 		}
 
 		if passiveCRDPath != "" {
-			kubereflex.Apply(passiveCRDPath, &secondaryClusterConfigPath, "TODO")
+			kubereflex.Apply(passiveCRDPath, &secondaryClusterConfigPath, secondaryContext)
 		}
 	},
 }
@@ -175,6 +181,9 @@ var timeout int
 
 var mainClusterConfigPath string
 var secondaryClusterConfigPath string
+
+var mainContext string
+var secondaryContext string
 
 var activeCRDPath string
 var passiveCRDPath string

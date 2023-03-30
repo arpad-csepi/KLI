@@ -255,12 +255,12 @@ func Remove(CRObject client.Object) error {
 
 // GetAPIServerEndpoint is return with the API endpoint URL address
 func GetAPIServerEndpoint() (string, error) {
-	endpoint := ActiveClientset.discovery.RESTClient().Get().URL().Host
-	_, err := url.ParseRequestURI(endpoint)
+	endpoint := ActiveClientset.discovery.RESTClient().Get().URL()
+	_, err := url.ParseRequestURI(endpoint.String())
 	if err != nil {
 		return "", err
 	}
-	return endpoint, nil
+	return endpoint.Host, nil
 }
 
 // GetDeploymentName is search the deployment name based on the chart release name
