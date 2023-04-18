@@ -4,6 +4,8 @@ Copyright © 2022 Árpád Csepi csepi.arpad@outlook.com
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/arpad-csepi/KLI/kubereflex"
 	"github.com/spf13/cobra"
 )
@@ -18,25 +20,32 @@ var uninstallCmd = &cobra.Command{
 			mainClusterConfigPath = *getKubeConfig()
 		}
 
-		
+		fmt.Println("Main cluster context switcher:")
+		mainContext = kubereflex.ChooseContextFromConfig(&mainClusterConfigPath)
 
 		if activeCRDPath != "" {
-			kubereflex.Remove(activeCRDPath, &mainClusterConfigPath, "TODO")
+			kubereflex.Remove(activeCRDPath, &mainClusterConfigPath, mainContext)
 		}
 
 		kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry", &mainClusterConfigPath)
 		kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system", &mainClusterConfigPath)
 
+		if secondaryClusterConfigPath == "" {
+			secondaryClusterConfigPath = *getKubeConfig()
+		}
 		if secondaryClusterConfigPath != "" {
+			fmt.Println("Main cluster context switcher:")
+			secondaryContext = kubereflex.ChooseContextFromConfig(&secondaryClusterConfigPath)
+
 			if passiveCRDPath != "" {
-				kubereflex.Remove(passiveCRDPath, &secondaryClusterConfigPath, "TODO")
+				kubereflex.Remove(passiveCRDPath, &secondaryClusterConfigPath, secondaryContext)
 			}
 
 			kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry", &secondaryClusterConfigPath)
 			kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system", &secondaryClusterConfigPath)
 
 			if detach {
-				kubereflex.Detach(&mainClusterConfigPath, "TODO", &secondaryClusterConfigPath, "TODO", "cluster-registry", "cluster-registry")
+				kubereflex.Detach(&mainClusterConfigPath, mainContext, &secondaryClusterConfigPath, secondaryContext, "cluster-registry", "cluster-registry")
 			}
 		}
 

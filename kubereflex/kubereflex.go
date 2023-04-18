@@ -7,7 +7,7 @@ import (
 	"github.com/arpad-csepi/KLI/kubereflex/io"
 	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
 
-	"github.com/manifoldco/promptui"
+	// "github.com/manifoldco/promptui"
 )
 
 func ChooseContextFromConfig(kubeconfig *string) string {
@@ -16,13 +16,14 @@ func ChooseContextFromConfig(kubeconfig *string) string {
 		panic(err)
 	}
 
-	prompt := promptui.Select{
-		Label: "Select context for the cluster",
-		Items: contexts,
-	}
+	// prompt := promptui.Select{
+	// 	Label: "Select context for the cluster",
+	// 	Items: contexts,
+	// }
 
-	_, selectedItem, err := prompt.Run()
-
+	// _, selectedItem, err := prompt.Run()
+	var i = 0
+	selectedItem := contexts[i]
 	if err != nil {
 		panic(err)
 	}
