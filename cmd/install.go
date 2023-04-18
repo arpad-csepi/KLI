@@ -72,7 +72,7 @@ var installCmd = &cobra.Command{
 		}
 
 		if secondaryClusterConfigPath == "" {
-			secondaryClusterConfigPath = *getKubeConfig()
+			secondaryClusterConfigPath = mainClusterConfigPath
 		}
 		if secondaryClusterConfigPath != "" {
 			fmt.Println("Secondary cluster context switcher:")

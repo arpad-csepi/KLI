@@ -31,7 +31,7 @@ var uninstallCmd = &cobra.Command{
 		kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system", &mainClusterConfigPath)
 
 		if secondaryClusterConfigPath == "" {
-			secondaryClusterConfigPath = *getKubeConfig()
+			secondaryClusterConfigPath = mainClusterConfigPath
 		}
 		if secondaryClusterConfigPath != "" {
 			fmt.Println("Main cluster context switcher:")
