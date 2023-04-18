@@ -112,10 +112,10 @@ func CreateClient(c ...map[string]string) error {
 
 func buildConfigFromFlags(context string, kubeconfigPath string) (*rest.Config, error) {
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
-			&clientcmd.ConfigOverrides{
-					CurrentContext: context,
-			}).ClientConfig()
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: context,
+		}).ClientConfig()
 }
 
 func SetActiveClientset(newClientset Clientset) {
@@ -266,7 +266,9 @@ func GetAPIServerEndpoint() (string, error) {
 // GetDeploymentName is search the deployment name based on the chart release name
 func GetDeploymentName(releaseName string, namespace string) (string, error) {
 	deployments := &appsv1.DeploymentList{}
-	err := ActiveClientset.client.List(context.TODO(), deployments, &client.ListOptions{})
+
+	NamespacedClient := client.NewNamespacedClient(ActiveClientset.client, namespace)
+	err := NamespacedClient.List(context.TODO(), deployments, &client.ListOptions{})
 	if err != nil {
 		return "", err
 	}
