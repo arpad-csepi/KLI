@@ -32,7 +32,7 @@ var installCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install istio-operator and cluster-registry-controller",
 	Long:  `Install command is create charts, install with helm package manager and configure depends on other parameters`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		if mainClusterConfigPath == "" {
 			mainClusterConfigPath = *getKubeConfig()
 		}
@@ -71,6 +71,9 @@ var installCmd = &cobra.Command{
 				time.Duration(timeout)*time.Second)
 		}
 
+		if secondaryClusterConfigPath == "" {
+			secondaryClusterConfigPath = *getKubeConfig()
+		}
 		if secondaryClusterConfigPath != "" {
 			fmt.Println("Secondary cluster context switcher:")
 			secondaryContext = kubereflex.ChooseContextFromConfig(&secondaryClusterConfigPath)

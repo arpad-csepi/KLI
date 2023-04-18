@@ -13,7 +13,7 @@ var uninstallCmd = &cobra.Command{
 	Use:   "uninstall",
 	Short: "Uninstall istio-operator and cluster-registry-controller",
 	Long: "Uninstall command is uninstall charts deployment with helm package manager and clean-up depends on other parameters",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		if mainClusterConfigPath == "" {
 			mainClusterConfigPath = *getKubeConfig()
 		}
