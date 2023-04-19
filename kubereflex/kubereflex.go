@@ -1,6 +1,7 @@
 package kubereflex
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/arpad-csepi/KLI/kubereflex/helm"
@@ -26,6 +27,7 @@ func ChooseContextFromConfig(kubeconfig *string) string {
 		panic(err)
 	}
 
+	fmt.Println(selectedItem)
 	return selectedItem
 }
 
