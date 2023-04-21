@@ -201,6 +201,7 @@ func installChart(releaseName, repositoryName, chartName string, args map[string
 		}
 	}
 
+	client.CreateNamespace = true
 	client.Namespace = settings.Namespace()
 	release, err := client.Run(chartRequested, vals)
 
@@ -226,8 +227,8 @@ func uninstallChart(releaseName string) error {
 		fmt.Printf("%s release not running.\n", releaseName)
 		return nil
 	}
-	
-	fmt.Printf("%s is uninstalled\n", release.Release.Name)		
+
+	fmt.Printf("%s is uninstalled\n", release.Release.Name)
 	return nil
 }
 

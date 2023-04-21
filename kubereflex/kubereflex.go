@@ -32,25 +32,14 @@ func ChooseContextFromConfig(kubeconfig *string) string {
 }
 
 func InstallHelmChart(chartUrl string, repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string, context string) {
-	clientConfig := map[string]string {
+	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
-		"context": context,
+		"context":    context,
 	}
 
 	err := kubectl.CreateClient(clientConfig)
 	if err != nil {
 		panic(err)
-	}
-
-	isNamespaceExists, err := kubectl.IsNamespaceExists(namespace)
-	if err != nil {
-		panic(err)
-	}
-	if !isNamespaceExists {
-		err := kubectl.CreateNamespace(namespace)
-		if err != nil {
-			panic(err)
-		}
 	}
 
 	isRepositoryExists, err := helm.IsRepositoryExists(repositoryName)
@@ -78,9 +67,9 @@ func UninstallHelmChart(releaseName string, namespace string, kubeconfig *string
 }
 
 func GetDeploymentName(releaseName string, namespace string, kubeconfig *string, context string) string {
-	clientConfig := map[string]string {
+	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
-		"context": context,
+		"context":    context,
 	}
 
 	err := kubectl.CreateClient(clientConfig)
@@ -96,9 +85,9 @@ func GetDeploymentName(releaseName string, namespace string, kubeconfig *string,
 }
 
 func Verify(deploymentName string, namespace string, kubeconfig *string, context string, timeout time.Duration) {
-	clientConfig := map[string]string {
+	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
-		"context": context,
+		"context":    context,
 	}
 
 	err := kubectl.CreateClient(clientConfig)
@@ -113,9 +102,9 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, context
 }
 
 func GetAPIServerEndpoint(kubeconfig *string, context string) string {
-	clientConfig := map[string]string {
+	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
-		"context": context,
+		"context":    context,
 	}
 
 	err := kubectl.CreateClient(clientConfig)
@@ -131,9 +120,9 @@ func GetAPIServerEndpoint(kubeconfig *string, context string) string {
 }
 
 func Apply(CRDPath string, kubeconfig *string, context string) {
-	clientConfig := map[string]string {
+	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
-		"context": context,
+		"context":    context,
 	}
 
 	err := kubectl.CreateClient(clientConfig)
@@ -153,9 +142,9 @@ func Apply(CRDPath string, kubeconfig *string, context string) {
 }
 
 func Remove(CRDPath string, kubeconfig *string, context string) {
-	clientConfig := map[string]string {
+	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
-		"context": context,
+		"context":    context,
 	}
 
 	err := kubectl.CreateClient(clientConfig)
@@ -175,15 +164,15 @@ func Remove(CRDPath string, kubeconfig *string, context string) {
 }
 
 func Attach(kubeconfig1 *string, context1 string, kubeconfig2 *string, context2 string, namespace1 string, namespace2 string) {
-	clientConfig1 := map[string]string {
+	clientConfig1 := map[string]string{
 		"kubeconfig": *kubeconfig1,
-		"context": context1,
+		"context":    context1,
 	}
-	clientConfig2 := map[string]string {
+	clientConfig2 := map[string]string{
 		"kubeconfig": *kubeconfig2,
-		"context": context2,
+		"context":    context2,
 	}
-	
+
 	err := kubectl.CreateClient(clientConfig1, clientConfig2)
 	if err != nil {
 		panic(err)
@@ -195,13 +184,13 @@ func Attach(kubeconfig1 *string, context1 string, kubeconfig2 *string, context2 
 }
 
 func Detach(kubeconfig1 *string, context1 string, kubeconfig2 *string, context2 string, namespace1 string, namespace2 string) {
-	clientConfig1 := map[string]string {
+	clientConfig1 := map[string]string{
 		"kubeconfig": *kubeconfig1,
-		"context": context1,
+		"context":    context1,
 	}
-	clientConfig2 := map[string]string {
+	clientConfig2 := map[string]string{
 		"kubeconfig": *kubeconfig2,
-		"context": context2,
+		"context":    context2,
 	}
 
 	err := kubectl.CreateClient(clientConfig1, clientConfig2)
