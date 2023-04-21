@@ -39,5 +39,5 @@ plz-out
 .vscode/launch.json
 cluster2.yaml
 KLI
-watcher.sh
-watcher2.sh
+
+clean-up.sh
