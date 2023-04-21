@@ -110,7 +110,7 @@ func appendCRD() {
 	_ = Apply(clusterCRD) // Need clientset mapper refresh
 
 	time.Sleep(2 * time.Second) // Wait for cluster CRD init
-	Clients = []Clientset{}     // Delete all clientset with old mapping
+	clients = []Clientset{}     // Delete all clientset with old mapping
 	createTestClient()          // Create new clientsets with new mapping (memcache will be invalidated)
 }
 
@@ -241,14 +241,14 @@ func TestGetDeploymentName(t *testing.T) {
 func TestAttach(t *testing.T) {
 	createTestClient()
 	appendCRD()
-	SetActiveClientset(Clients[1])
+	SetActiveClientset(clients[1])
 	appendCRD()
 
 	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(testSecret1)
 	_ = Apply(testCluster1)
 
-	SetActiveClientset(Clients[1])
+	SetActiveClientset(clients[1])
 
 	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(testSecret2)
@@ -265,14 +265,14 @@ func TestAttach(t *testing.T) {
 func TestDetach(t *testing.T) {
 	createTestClient()
 	appendCRD()
-	SetActiveClientset(Clients[1])
+	SetActiveClientset(clients[1])
 	appendCRD()
 
 	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(testSecret1)
 	_ = Apply(testCluster1)
 
-	SetActiveClientset(Clients[1])
+	SetActiveClientset(clients[1])
 
 	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(testSecret2)
@@ -296,7 +296,7 @@ func TestGetClusterInfo(t *testing.T) {
 	_ = Apply(testSecret1)
 	_ = Apply(testCluster1)
 
-	NamespacedClient := client.NewNamespacedClient(Clients[0].client, testNamespaceName)
+	NamespacedClient := client.NewNamespacedClient(clients[0].client, testNamespaceName)
 	clusterInfo, err := getClusterInfo(NamespacedClient, objectKey1)
 	if err != nil {
 		t.Error(err)

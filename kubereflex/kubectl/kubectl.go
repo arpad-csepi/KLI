@@ -37,7 +37,7 @@ type clusterInfo struct {
 }
 
 var ActiveClientset Clientset
-var Clients []Clientset
+var clients []Clientset
 
 // CreateClient set up kubernetes REST client which scheme contains custom kubernetes types from banzaicloud and cisco-open
 func CreateClient(c ...map[string]string) error {
@@ -102,12 +102,17 @@ func CreateClient(c ...map[string]string) error {
 
 		clientset.client = customClient
 
-		Clients = append(Clients, clientset)
+		clients = append(clients, clientset)
 	}
 
-	SetActiveClientset(Clients[0])
+	SetActiveClientset(clients[0])
 
 	return nil
+}
+
+// TODO: Maybe need more elegant solution, but now is just fine
+func RemoveAllClients() {
+	clients = []Clientset{}
 }
 
 func buildConfigFromFlags(context string, kubeconfigPath string) (*rest.Config, error) {
@@ -292,8 +297,8 @@ func Attach(namespace1 string, namespace2 string) error {
 	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
 	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
 
-	NamespacedClient1 := client.NewNamespacedClient(Clients[0].client, namespace1)
-	NamespacedClient2 := client.NewNamespacedClient(Clients[1].client, namespace2)
+	NamespacedClient1 := client.NewNamespacedClient(clients[0].client, namespace1)
+	NamespacedClient2 := client.NewNamespacedClient(clients[1].client, namespace2)
 
 	fmt.Println("Get some info from clusters")
 	cluster1Info, err := getClusterInfo(NamespacedClient1, objectKey1)
@@ -307,10 +312,10 @@ func Attach(namespace1 string, namespace2 string) error {
 	}
 
 	fmt.Println("Sync resources between clusters")
-	SetActiveClientset(Clients[0])
+	SetActiveClientset(clients[0])
 	Apply(cluster2Info.secret)
 	Apply(cluster2Info.cluster)
-	SetActiveClientset(Clients[1])
+	SetActiveClientset(clients[1])
 	Apply(cluster1Info.secret)
 	Apply(cluster1Info.cluster)
 
@@ -325,12 +330,12 @@ func Detach(namespace1 string, namespace2 string) error {
 	objectKey1 := client.ObjectKey{Namespace: namespace1, Name: "demo-active"}
 	objectKey2 := client.ObjectKey{Namespace: namespace2, Name: "demo-passive"}
 
-	NamespacedClient1 := client.NewNamespacedClient(Clients[0].client, namespace1)
-	NamespacedClient2 := client.NewNamespacedClient(Clients[1].client, namespace2)
+	NamespacedClient1 := client.NewNamespacedClient(clients[0].client, namespace1)
+	NamespacedClient2 := client.NewNamespacedClient(clients[1].client, namespace2)
 
 	fmt.Println("Get clusters and secrets info, please wait...")
 
-	SetActiveClientset(Clients[0])
+	SetActiveClientset(clients[0])
 	//TODO: Make a better struct for more compact code
 	cluster1Info, err1 := getClusterInfo(NamespacedClient1, objectKey1)
 	if err1 != nil {
@@ -347,7 +352,7 @@ func Detach(namespace1 string, namespace2 string) error {
 		Remove(cluster1Info2.secret)
 	}
 
-	SetActiveClientset(Clients[1])
+	SetActiveClientset(clients[1])
 	cluster2Info, err3 := getClusterInfo(NamespacedClient2, objectKey1)
 	if err3 != nil {
 		fmt.Printf("%s not here on the secondary cluster.\n", objectKey1.Name)

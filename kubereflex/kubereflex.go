@@ -70,6 +70,9 @@ func GetDeploymentName(releaseName string, namespace string, kubeconfig *string,
 	if err != nil {
 		panic(err.Error())
 	}
+
+	kubectl.RemoveAllClients()
+
 	return deploymentName
 }
 
@@ -88,6 +91,8 @@ func Verify(deploymentName string, namespace string, kubeconfig *string, context
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.RemoveAllClients()
 }
 
 func GetAPIServerEndpoint(kubeconfig *string, context string) string {
@@ -105,6 +110,9 @@ func GetAPIServerEndpoint(kubeconfig *string, context string) string {
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.RemoveAllClients()
+
 	return endpoint
 }
 
@@ -128,6 +136,8 @@ func Apply(CRDPath string, kubeconfig *string, context string) {
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.RemoveAllClients()
 }
 
 func Remove(CRDPath string, kubeconfig *string, context string) {
@@ -150,6 +160,8 @@ func Remove(CRDPath string, kubeconfig *string, context string) {
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.RemoveAllClients()
 }
 
 func Attach(kubeconfig1 *string, context1 string, kubeconfig2 *string, context2 string, namespace1 string, namespace2 string) {
@@ -170,6 +182,8 @@ func Attach(kubeconfig1 *string, context1 string, kubeconfig2 *string, context2 
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.RemoveAllClients()
 }
 
 func Detach(kubeconfig1 *string, context1 string, kubeconfig2 *string, context2 string, namespace1 string, namespace2 string) {
@@ -190,4 +204,6 @@ func Detach(kubeconfig1 *string, context1 string, kubeconfig2 *string, context2 
 	if err != nil {
 		panic(err)
 	}
+
+	kubectl.RemoveAllClients()
 }
