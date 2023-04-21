@@ -34,14 +34,23 @@ func ChooseContextFromConfig(kubeconfig *string) string {
 		}
 	}
 
-	prompt := promptui.Select{
-		Label: "Select context for the cluster",
-		Items: notUsedContexts,
+	selectedItem := ""
+
+	if len(notUsedContexts) == 0 {
+		panic("no more unused context remained")
 	}
 
-	_, selectedItem, err := prompt.Run()
-	if err != nil {
-		panic(err)
+	if len(notUsedContexts) > 1 {
+		prompt := promptui.Select{
+			Label: "Select context for the cluster",
+			Items: notUsedContexts,
+		}
+		_, selectedItem, err = prompt.Run()
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		selectedItem = notUsedContexts[0]
 	}
 
 	usedContexts = append(usedContexts, selectedItem)
