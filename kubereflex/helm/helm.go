@@ -25,15 +25,16 @@ import (
 
 var settings *cli.EnvSettings = cli.New()
 
-func setSettings(namespace string, kubeconfig *string) {
+func setSettings(namespace string, kubeconfig *string, context string) {
 	os.Setenv("HELM_NAMESPACE", namespace)
 	settings.SetNamespace(namespace)
 	settings.KubeConfig = *kubeconfig
+	settings.KubeContext = context
 }
 
 // Install set helm settings up, perform repository updates and install the chart which is specified
-func Install(repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string) error {
-	setSettings(namespace, kubeconfig)
+func Install(repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string, context string) error {
+	setSettings(namespace, kubeconfig, context)
 	err := RepositoryUpdate()
 	if err != nil {
 		return err
@@ -47,8 +48,8 @@ func Install(repositoryName string, chartName string, releaseName string, namesp
 }
 
 // Uninstall set helm settings up and uninstall the chart which is specified
-func Uninstall(releaseName string, namespace string, kubeconfig *string) error {
-	setSettings(namespace, kubeconfig)
+func Uninstall(releaseName string, namespace string, kubeconfig *string, context string) error {
+	setSettings(namespace, kubeconfig, context)
 	err := uninstallChart(releaseName)
 	if err != nil {
 		return err

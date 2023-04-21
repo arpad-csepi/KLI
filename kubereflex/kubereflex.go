@@ -1,7 +1,6 @@
 package kubereflex
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/arpad-csepi/KLI/kubereflex/helm"
@@ -27,25 +26,15 @@ func ChooseContextFromConfig(kubeconfig *string) string {
 		panic(err)
 	}
 
-	fmt.Println(selectedItem)
 	return selectedItem
 }
 
 func InstallHelmChart(chartUrl string, repositoryName string, chartName string, releaseName string, namespace string, args map[string]string, kubeconfig *string, context string) {
-	clientConfig := map[string]string{
-		"kubeconfig": *kubeconfig,
-		"context":    context,
-	}
-
-	err := kubectl.CreateClient(clientConfig)
-	if err != nil {
-		panic(err)
-	}
-
 	isRepositoryExists, err := helm.IsRepositoryExists(repositoryName)
 	if err != nil {
 		panic(err)
 	}
+
 	if !isRepositoryExists {
 		err := helm.RepositoryAdd(repositoryName, chartUrl)
 		if err != nil {
@@ -53,14 +42,14 @@ func InstallHelmChart(chartUrl string, repositoryName string, chartName string, 
 		}
 	}
 
-	err = helm.Install(repositoryName, chartName, releaseName, namespace, args, kubeconfig)
+	err = helm.Install(repositoryName, chartName, releaseName, namespace, args, kubeconfig, context)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func UninstallHelmChart(releaseName string, namespace string, kubeconfig *string) {
-	err := helm.Uninstall(releaseName, namespace, kubeconfig)
+func UninstallHelmChart(releaseName string, namespace string, kubeconfig *string, context string) {
+	err := helm.Uninstall(releaseName, namespace, kubeconfig, context)
 	if err != nil {
 		panic(err)
 	}

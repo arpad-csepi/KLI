@@ -27,8 +27,8 @@ var uninstallCmd = &cobra.Command{
 			kubereflex.Remove(activeCRDPath, &mainClusterConfigPath, mainContext)
 		}
 
-		kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry", &mainClusterConfigPath)
-		kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system", &mainClusterConfigPath)
+		kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry", &mainClusterConfigPath, mainContext)
+		kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system", &mainClusterConfigPath, mainContext)
 
 		if secondaryClusterConfigPath == "" {
 			secondaryClusterConfigPath = mainClusterConfigPath
@@ -41,8 +41,8 @@ var uninstallCmd = &cobra.Command{
 				kubereflex.Remove(passiveCRDPath, &secondaryClusterConfigPath, secondaryContext)
 			}
 
-			kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry", &secondaryClusterConfigPath)
-			kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system", &secondaryClusterConfigPath)
+			kubereflex.UninstallHelmChart("cluster-registry", "cluster-registry", &secondaryClusterConfigPath, secondaryContext)
+			kubereflex.UninstallHelmChart("banzaicloud-stable", "istio-system", &secondaryClusterConfigPath, secondaryContext)
 
 			if detach {
 				kubereflex.Detach(&mainClusterConfigPath, mainContext, &secondaryClusterConfigPath, secondaryContext, "cluster-registry", "cluster-registry")

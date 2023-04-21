@@ -8,7 +8,9 @@ import (
 
 	"k8s.io/client-go/util/homedir"
 
+	"github.com/arpad-csepi/KLI/kubereflex/io"
 	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
+	"github.com/manifoldco/promptui"
 )
 
 type chartData struct {
@@ -41,10 +43,33 @@ func getKubeConfig() *string {
 	return kubeconfig
 }
 
+func ChooseContextFromTestConfig() string {
+	kubeconfig := getKubeConfig()
+
+	contexts, err := io.GetContextsFromConfig(*kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+
+	prompt := promptui.Select{
+		Label: "Select context for the cluster",
+		Items: contexts,
+	}
+
+	_, selectedItem, err := prompt.Run()
+	if err != nil {
+		panic(err)
+	}
+
+	return selectedItem
+}
+
 func TestSetSettings(t *testing.T) {
 	kubeconfig := getKubeConfig()
 
-	setSettings(testChart.namespace, kubeconfig)
+	context := ChooseContextFromTestConfig()
+
+	setSettings(testChart.namespace, kubeconfig, context)
 
 	if os.Getenv("HELM_NAMESPACE") != testChart.namespace {
 		t.Errorf("Helm namespace is incorrect")
@@ -57,9 +82,15 @@ func TestSetSettings(t *testing.T) {
 	}
 }
 
+func ChooseContextFromConfig(kubeconfig *string) {
+	panic("unimplemented")
+}
+
 func TestInstall(t *testing.T) {
 	kubeconfig := getKubeConfig()
-	clientConfig := map[string]string {
+	context := ChooseContextFromTestConfig()
+
+	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
 	}
 
@@ -68,7 +99,7 @@ func TestInstall(t *testing.T) {
 	_ = RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
 	kubectl.CreateNamespace(testChart.namespace)
 
-	err := Install(testChart.repositoryName, testChart.chartName, testChart.releaseName, testChart.namespace, testChart.arguments, kubeconfig)
+	err := Install(testChart.repositoryName, testChart.chartName, testChart.releaseName, testChart.namespace, testChart.arguments, kubeconfig, context)
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,7 +107,9 @@ func TestInstall(t *testing.T) {
 
 func TestUninstall(t *testing.T) {
 	kubeconfig := getKubeConfig()
-	clientConfig := map[string]string {
+	context := ChooseContextFromTestConfig()
+
+	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
 	}
 
@@ -84,9 +117,9 @@ func TestUninstall(t *testing.T) {
 
 	_ = RepositoryAdd(testChart.repositoryName, testChart.chartUrl)
 	kubectl.CreateNamespace(testChart.namespace)
-	_ = Install(testChart.repositoryName, testChart.chartName, testChart.releaseName, testChart.namespace, testChart.arguments, kubeconfig)
+	_ = Install(testChart.repositoryName, testChart.chartName, testChart.releaseName, testChart.namespace, testChart.arguments, kubeconfig, context)
 
-	err := Uninstall(testChart.releaseName, testChart.namespace, kubeconfig)
+	err := Uninstall(testChart.releaseName, testChart.namespace, kubeconfig, context)
 	if err != nil {
 		t.Error(err)
 	}
