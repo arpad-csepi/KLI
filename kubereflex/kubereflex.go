@@ -10,21 +10,41 @@ import (
 	"github.com/manifoldco/promptui"
 )
 
+var usedContexts = []string{}
+
 func ChooseContextFromConfig(kubeconfig *string) string {
 	contexts, err := io.GetContextsFromConfig(*kubeconfig)
 	if err != nil {
 		panic(err)
 	}
 
+	notUsedContexts := []string{}
+
+	for _, context := range contexts {
+		usedFound := false
+
+		for _, usedContext := range usedContexts {
+			if context == usedContext {
+				usedFound = true
+			}
+		}
+
+		if !usedFound {
+			notUsedContexts = append(notUsedContexts, context)
+		}
+	}
+
 	prompt := promptui.Select{
 		Label: "Select context for the cluster",
-		Items: contexts,
+		Items: notUsedContexts,
 	}
 
 	_, selectedItem, err := prompt.Run()
 	if err != nil {
 		panic(err)
 	}
+
+	usedContexts = append(usedContexts, selectedItem)
 
 	return selectedItem
 }
