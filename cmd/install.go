@@ -110,10 +110,6 @@ var installCmd = &cobra.Command{
 			}
 		}
 
-		if attach {
-			kubereflex.Attach(&mainClusterConfigPath, mainContext, &secondaryClusterConfigPath, secondaryContext, "cluster-registry", "cluster-registry")
-		}
-
 		istioOperator := chartData{
 			chartUrl:       "https://kubernetes-charts.banzaicloud.com",
 			repositoryName: "banzaicloud-stable",
@@ -175,6 +171,10 @@ var installCmd = &cobra.Command{
 
 		if passiveCRDPath != "" {
 			kubereflex.Apply(passiveCRDPath, &secondaryClusterConfigPath, secondaryContext)
+		}
+
+		if attach {
+			kubereflex.Attach(&mainClusterConfigPath, mainContext, &secondaryClusterConfigPath, secondaryContext, "cluster-registry", "cluster-registry")
 		}
 	},
 }
