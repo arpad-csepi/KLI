@@ -1,4 +1,4 @@
-name: build-test
+name: build-test-updated
 run-name: Build with updated dependencies
 on: [push]
 jobs:
