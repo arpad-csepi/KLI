@@ -10,7 +10,6 @@ import (
 
 	"github.com/arpad-csepi/KLI/kubereflex/io"
 	"github.com/arpad-csepi/KLI/kubereflex/kubectl"
-	"github.com/manifoldco/promptui"
 )
 
 type chartData struct {
@@ -51,17 +50,11 @@ func ChooseContextFromTestConfig() string {
 		panic(err)
 	}
 
-	prompt := promptui.Select{
-		Label: "Select context for the cluster",
-		Items: contexts,
+	if contexts[0] == "" {
+		panic("no context found")
 	}
 
-	_, selectedItem, err := prompt.Run()
-	if err != nil {
-		panic(err)
-	}
-
-	return selectedItem
+	return contexts[0]
 }
 
 func TestSetSettings(t *testing.T) {

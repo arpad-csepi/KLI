@@ -1,0 +1,19 @@
+name: build-test
+run-name: Build with updated dependencies
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@latest
+      - name: Set up Go
+        uses: actions/setup-go@latest
+
+      - name: Set up Helm
+        uses: azure/setup-helm@latest
+
+      - name: Install dependencies
+        run: go get -u .
+
+      - name: Build
+        run: go build -v ./...
