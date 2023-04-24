@@ -87,7 +87,7 @@ func createTestClient() {
 	}
 	clientConfig2 := map[string]string{
 		"kubeconfig": kubeconfig,
-		"context":    "kind-kind-test2",
+		"context":    "kind-kind2-test",
 	}
 
 	err = CreateClient(clientConfig1, clientConfig2)
