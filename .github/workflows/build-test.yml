@@ -35,7 +35,7 @@ jobs:
         uses: helm/kind-action@v1.4.0
         with:
           config: kubereflex/kind2-config.yaml
-          cluster_name: kind-test2
+          cluster_name: kind2-test
           
       - name: Test
         run: go test -v ./...
