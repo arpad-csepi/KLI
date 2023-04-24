@@ -31,20 +31,18 @@ var testChart = chartData{
 	// arguments:      map[string]string{"set": "localCluster.name=demo-active,network.name=network1,controller.apiServerEndpointAddress=" + kubereflex.GetAPIServerEndpoint(&mainClusterConfigPath)},
 }
 
-func getKubeConfig() *string {
-	var kubeconfig *string
+var kubeconfig *string
+
+func getKubeConfig() {
 	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+		if kubeconfig == nil {
+			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+		}
 	}
-
-	flag.Parse()
-
-	return kubeconfig
 }
 
-func ChooseContextFromTestConfig() string {
-	kubeconfig := getKubeConfig()
 
+func ChooseContextFromTestConfig(kubeconfig *string) string {
 	contexts, err := io.GetContextsFromConfig(*kubeconfig)
 	if err != nil {
 		panic(err)
@@ -58,9 +56,8 @@ func ChooseContextFromTestConfig() string {
 }
 
 func TestSetSettings(t *testing.T) {
-	kubeconfig := getKubeConfig()
-
-	context := ChooseContextFromTestConfig()
+	getKubeConfig()
+	context := ChooseContextFromTestConfig(kubeconfig)
 
 	setSettings(testChart.namespace, kubeconfig, context)
 
@@ -80,8 +77,8 @@ func ChooseContextFromConfig(kubeconfig *string) {
 }
 
 func TestInstall(t *testing.T) {
-	kubeconfig := getKubeConfig()
-	context := ChooseContextFromTestConfig()
+	getKubeConfig()
+	context := ChooseContextFromTestConfig(kubeconfig)
 
 	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
@@ -99,8 +96,8 @@ func TestInstall(t *testing.T) {
 }
 
 func TestUninstall(t *testing.T) {
-	kubeconfig := getKubeConfig()
-	context := ChooseContextFromTestConfig()
+	getKubeConfig()
+	context := ChooseContextFromTestConfig(kubeconfig)
 
 	clientConfig := map[string]string{
 		"kubeconfig": *kubeconfig,
