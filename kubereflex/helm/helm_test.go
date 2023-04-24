@@ -41,7 +41,6 @@ func getKubeConfig() {
 	}
 }
 
-
 func ChooseContextFromTestConfig(kubeconfig *string) string {
 	contexts, err := io.GetContextsFromConfig(*kubeconfig)
 	if err != nil {
@@ -70,10 +69,6 @@ func TestSetSettings(t *testing.T) {
 	if settings.KubeConfig != *kubeconfig {
 		t.Errorf("Kubeconfig is incorrect")
 	}
-}
-
-func ChooseContextFromConfig(kubeconfig *string) {
-	panic("unimplemented")
 }
 
 func TestInstall(t *testing.T) {
