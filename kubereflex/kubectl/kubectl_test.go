@@ -114,19 +114,17 @@ func appendCRD() {
 
 func resetClusterToDefault() {
 	_ = DeleteNamespace(testNamespaceName)
-	time.Sleep(1 * time.Second)
 
 	_ = Remove(&testDeployment)
-	time.Sleep(1 * time.Second)
 
 	_ = Detach(testNamespaceName, testNamespaceName)
-	time.Sleep(1 * time.Second)
 
 	_ = Remove(testCluster1)
 	_ = Remove(testCluster2)
 	_ = Remove(testSecret1)
 	_ = Remove(testSecret2)
-	time.Sleep(1 * time.Second)
+
+	time.Sleep(3 * time.Second)
 }
 
 func TestCreateNamespace(t *testing.T) {
@@ -223,6 +221,7 @@ func TestVerify(t *testing.T) {
 
 	testTimeout := 3 * time.Second
 
+	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(&testDeployment)
 
 	err := Verify(testDeploymentName, testNamespaceName, testTimeout)
