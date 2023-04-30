@@ -94,8 +94,6 @@ func createTestClient() {
 	if err != nil {
 		panic(err)
 	}
-
-	backupClusterState()
 }
 
 // BUG: clusterCRD will be overriden after first Apply. Cannot use for second Apply!
@@ -114,9 +112,22 @@ func appendCRD() {
 	createTestClient()          // Create new clientsets with new mapping (memcache will be invalidated)
 }
 
-func backupClusterState() {}
+func resetClusterToDefault() {
+	_ = DeleteNamespace(testNamespaceName)
+	time.Sleep(1 * time.Second)
 
-func restoreClusterState() {}
+	_ = Remove(&testDeployment)
+	time.Sleep(1 * time.Second)
+
+	_ = Detach(testNamespaceName, testNamespaceName)
+	time.Sleep(1 * time.Second)
+
+	_ = Remove(testCluster1)
+	_ = Remove(testCluster2)
+	_ = Remove(testSecret1)
+	_ = Remove(testSecret2)
+	time.Sleep(1 * time.Second)
+}
 
 func TestCreateNamespace(t *testing.T) {
 	createTestClient()
@@ -125,6 +136,8 @@ func TestCreateNamespace(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+
+	resetClusterToDefault()
 }
 
 func TestGetNamespace(t *testing.T) {
@@ -137,7 +150,7 @@ func TestGetNamespace(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	restoreClusterState()
+	resetClusterToDefault()
 }
 
 func TestDeleteNamespace(t *testing.T) {
@@ -150,7 +163,7 @@ func TestDeleteNamespace(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	restoreClusterState()
+	resetClusterToDefault()
 }
 
 func TestIsNamespaceExists(t *testing.T) {
@@ -163,22 +176,7 @@ func TestIsNamespaceExists(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	restoreClusterState()
-}
-
-func TestVerify(t *testing.T) {
-	createTestClient()
-
-	testTimeout := 2 * time.Second
-
-	_ = Apply(&testDeployment)
-
-	err := Verify(testDeploymentName, testNamespaceName, testTimeout)
-	if err != nil {
-		t.Error(err.Error())
-	}
-
-	restoreClusterState()
+	resetClusterToDefault()
 }
 
 func TestApply(t *testing.T) {
@@ -191,7 +189,7 @@ func TestApply(t *testing.T) {
 		t.Error(err)
 	}
 
-	restoreClusterState()
+	resetClusterToDefault()
 }
 
 func TestRemove(t *testing.T) {
@@ -206,7 +204,7 @@ func TestRemove(t *testing.T) {
 		t.Error("Try to delete non-exist custom resource")
 	}
 
-	restoreClusterState()
+	resetClusterToDefault()
 }
 
 func TestAPIServerEndpoint(t *testing.T) {
@@ -217,7 +215,22 @@ func TestAPIServerEndpoint(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	restoreClusterState()
+	resetClusterToDefault()
+}
+
+func TestVerify(t *testing.T) {
+	createTestClient()
+
+	testTimeout := 3 * time.Second
+
+	_ = Apply(&testDeployment)
+
+	err := Verify(testDeploymentName, testNamespaceName, testTimeout)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	resetClusterToDefault()
 }
 
 func TestGetDeploymentName(t *testing.T) {
@@ -235,7 +248,7 @@ func TestGetDeploymentName(t *testing.T) {
 		t.Error("Deployment name is wrong!")
 	}
 
-	restoreClusterState()
+	resetClusterToDefault()
 }
 
 func TestAttach(t *testing.T) {
@@ -259,7 +272,7 @@ func TestAttach(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	restoreClusterState()
+	resetClusterToDefault()
 }
 
 func TestDetach(t *testing.T) {
@@ -285,7 +298,7 @@ func TestDetach(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	// restoreClusterState()
+	resetClusterToDefault()
 }
 
 func TestGetClusterInfo(t *testing.T) {
@@ -306,5 +319,5 @@ func TestGetClusterInfo(t *testing.T) {
 		t.Error("wrong resource name")
 	}
 
-	restoreClusterState()
+	resetClusterToDefault()
 }
