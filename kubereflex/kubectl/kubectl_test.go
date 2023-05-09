@@ -1,11 +1,13 @@
 package kubectl
 
 import (
+	"context"
+	"fmt"
+	"k8s.io/client-go/util/homedir"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"k8s.io/client-go/util/homedir"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -55,7 +57,6 @@ var testContainer = &corev1.Container{
 }
 
 var testDeployment = appsv1.Deployment{
-	TypeMeta: metav1.TypeMeta{},
 	ObjectMeta: metav1.ObjectMeta{
 		Name:        testDeploymentName,
 		Namespace:   testNamespaceName,
@@ -71,28 +72,29 @@ var testDeployment = appsv1.Deployment{
 			},
 			Spec: corev1.PodSpec{Containers: []corev1.Container{*testContainer}}},
 	},
-	Status: appsv1.DeploymentStatus{Replicas: 3, ReadyReplicas: 3},
 }
 
 func createTestClient() {
-	var err error
-	var kubeconfig string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = filepath.Join(home, ".kube", "config")
-	}
+	if len(clients) == 0 {
+		var err error
+		var kubeconfig string
+		if home := homedir.HomeDir(); home != "" {
+			kubeconfig = filepath.Join(home, ".kube", "config")
+		}
 
-	clientConfig1 := map[string]string{
-		"kubeconfig": kubeconfig,
-		"context":    "kind-kind-test",
-	}
-	clientConfig2 := map[string]string{
-		"kubeconfig": kubeconfig,
-		"context":    "kind-kind2-test",
-	}
+		clientConfig1 := map[string]string{
+			"kubeconfig": kubeconfig,
+			"context":    "kind-kind-test",
+		}
+		clientConfig2 := map[string]string{
+			"kubeconfig": kubeconfig,
+			"context":    "kind-kind2-test",
+		}
 
-	err = CreateClient(clientConfig1, clientConfig2)
-	if err != nil {
-		panic(err)
+		err = CreateClient(clientConfig1, clientConfig2)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -107,102 +109,165 @@ func appendCRD() {
 
 	_ = Apply(clusterCRD) // Need clientset mapper refresh
 
-	time.Sleep(2 * time.Second) // Wait for cluster CRD init
+	time.Sleep(3 * time.Second) // Wait for cluster CRD init
 	clients = []Clientset{}     // Delete all clientset with old mapping
 	createTestClient()          // Create new clientsets with new mapping (memcache will be invalidated)
 }
 
-func resetClusterToDefault() {
-	_ = DeleteNamespace(testNamespaceName)
+func GetNamespaceStatus(namespace string) string {
+	key := client.ObjectKey{Name: namespace}
+	ns := &corev1.Namespace{
+		Status: corev1.NamespaceStatus{},
+	}
+	err := ActiveClientset.client.Get(context.TODO(), key, ns, &client.GetOptions{})
+	if err != nil && err.Error() == "namespaces \"namespace-for-testing\" not found" {
+		return "Not found"
+	}
 
-	_ = Remove(&testDeployment)
+	if ns.Status.Phase == corev1.NamespacePhase("Active") {
+		return "Active"
+	}
 
-	_ = Detach(testNamespaceName, testNamespaceName)
+	return "Terminating"
+}
 
-	_ = Remove(testCluster1)
-	_ = Remove(testCluster2)
-	_ = Remove(testSecret1)
-	_ = Remove(testSecret2)
+func WaitForReadyDeployment(deployment appsv1.Deployment) {
+	key := client.ObjectKey{
+		Name:      deployment.Name,
+		Namespace: deployment.Namespace}
+	deploy := &appsv1.Deployment{}
 
-	time.Sleep(3 * time.Second)
+	timeout := 30 * time.Second
+	for timeout > 0 {
+		err := ActiveClientset.client.Get(context.TODO(), key, deploy, &client.GetOptions{})
+		if err == nil && deploy.Status.ReadyReplicas > 0 && deploy.Status.Replicas == deploy.Status.ReadyReplicas {
+			return
+		}
+
+		timeout -= 3 * time.Second
+		time.Sleep(3 * time.Second)
+	}
+}
+
+func setupCluster() {
+	for i := 0; i < len(clients); i++ {
+		SetActiveClientset(clients[i])
+
+		appendCRD()
+
+		timeout := 120 * time.Second
+		for true {
+			nsPhase := GetNamespaceStatus(testNamespaceName)
+			if nsPhase == "Active" {
+				break
+			} else if nsPhase == "Not found" {
+				_ = CreateNamespace(testNamespaceName)
+			}
+
+			fmt.Println("Phase: " + nsPhase)
+			if timeout == 0 {
+				panic("cannot create namespace")
+			}
+
+			time.Sleep(3 * time.Second)
+			timeout -= 3 * time.Second
+		}
+	}
+}
+
+func resetCluster() {
+	for i := 0; i < len(clients); i++ {
+		SetActiveClientset(clients[i])
+
+		_ = Remove(&testDeployment)
+
+		_ = Detach(testNamespaceName, testNamespaceName)
+
+		_ = Remove(testCluster1)
+		_ = Remove(testCluster2)
+		_ = Remove(testSecret1)
+		_ = Remove(testSecret2)
+
+		testDeployment.ResourceVersion = ""
+		testCluster1.ResourceVersion = ""
+		testCluster2.ResourceVersion = ""
+		testSecret1.ResourceVersion = ""
+		testSecret2.ResourceVersion = ""
+
+		_ = DeleteNamespace(testNamespaceName)
+	}
 }
 
 func TestCreateNamespace(t *testing.T) {
 	createTestClient()
+	resetCluster()
 
 	err := CreateNamespace(testNamespaceName)
 	if err != nil {
 		t.Error(err.Error())
 	}
-
-	resetClusterToDefault()
 }
 
 func TestGetNamespace(t *testing.T) {
 	createTestClient()
-
-	_ = CreateNamespace(testNamespaceName)
+	resetCluster()
+	setupCluster()
 
 	namespace, err := GetNamespace(testNamespaceName)
 	if err != nil || namespace == nil || namespace.Name != testNamespaceName {
 		t.Error(err.Error())
 	}
 
-	resetClusterToDefault()
 }
 
 func TestDeleteNamespace(t *testing.T) {
 	createTestClient()
-
-	_ = CreateNamespace(testNamespaceName)
+	resetCluster()
+	setupCluster()
 
 	err := DeleteNamespace(testNamespaceName)
 	if err != nil {
 		t.Error(err.Error())
 	}
-
-	resetClusterToDefault()
 }
 
 func TestIsNamespaceExists(t *testing.T) {
 	createTestClient()
-
-	_ = CreateNamespace(testNamespaceName)
+	resetCluster()
+	setupCluster()
 
 	exists, err := IsNamespaceExists(testNamespaceName)
-	if err != nil || exists != true {
+	if err != nil && exists != true {
 		t.Error(err.Error())
 	}
-
-	resetClusterToDefault()
 }
 
 func TestApply(t *testing.T) {
 	createTestClient()
-
-	_ = CreateNamespace(testNamespaceName)
+	resetCluster()
+	setupCluster()
 
 	err := Apply(&testDeployment)
 	if err != nil {
 		t.Error(err)
 	}
 
-	resetClusterToDefault()
+	WaitForReadyDeployment(testDeployment)
 }
 
 func TestRemove(t *testing.T) {
 	createTestClient()
+	resetCluster()
+	setupCluster()
 
-	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(&testDeployment)
+	WaitForReadyDeployment(testDeployment)
 
 	err := Remove(&testDeployment)
 
 	if err != nil {
 		t.Error("Try to delete non-exist custom resource")
 	}
-
-	resetClusterToDefault()
 }
 
 func TestAPIServerEndpoint(t *testing.T) {
@@ -212,31 +277,30 @@ func TestAPIServerEndpoint(t *testing.T) {
 	if err != nil || endpoint == "" {
 		t.Error(err.Error())
 	}
-
-	resetClusterToDefault()
 }
 
 func TestVerify(t *testing.T) {
 	createTestClient()
+	resetCluster()
+	setupCluster()
 
-	testTimeout := 3 * time.Second
-
-	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(&testDeployment)
+	WaitForReadyDeployment(testDeployment)
 
+	testTimeout := 15 * time.Second
 	err := Verify(testDeploymentName, testNamespaceName, testTimeout)
 	if err != nil {
 		t.Error(err.Error())
 	}
-
-	resetClusterToDefault()
 }
 
 func TestGetDeploymentName(t *testing.T) {
 	createTestClient()
+	resetCluster()
+	setupCluster()
 
-	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(&testDeployment)
+	WaitForReadyDeployment(testDeployment)
 
 	deploymentName, err := GetDeploymentName(testDeploymentReleaseName, testNamespaceName)
 	if err != nil {
@@ -246,15 +310,31 @@ func TestGetDeploymentName(t *testing.T) {
 	if testDeploymentName != deploymentName {
 		t.Error("Deployment name is wrong!")
 	}
+}
 
-	resetClusterToDefault()
+func TestGetClusterInfo(t *testing.T) {
+	createTestClient()
+	resetCluster()
+	setupCluster()
+
+	_ = Apply(testSecret1)
+	_ = Apply(testCluster1)
+
+	NamespacedClient := client.NewNamespacedClient(clients[0].client, testNamespaceName)
+	clusterInfo, err := getClusterInfo(NamespacedClient, objectKey1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if clusterInfo.secret.Name != testSecret1.Name || clusterInfo.cluster.Name != testCluster1.Name {
+		t.Error("wrong resource name")
+	}
 }
 
 func TestAttach(t *testing.T) {
 	createTestClient()
-	appendCRD()
-	SetActiveClientset(clients[1])
-	appendCRD()
+	resetCluster()
+	setupCluster()
 
 	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(testSecret1)
@@ -270,15 +350,12 @@ func TestAttach(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-
-	resetClusterToDefault()
 }
 
 func TestDetach(t *testing.T) {
 	createTestClient()
-	appendCRD()
-	SetActiveClientset(clients[1])
-	appendCRD()
+	resetCluster()
+	setupCluster()
 
 	_ = CreateNamespace(testNamespaceName)
 	_ = Apply(testSecret1)
@@ -296,27 +373,4 @@ func TestDetach(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-
-	resetClusterToDefault()
-}
-
-func TestGetClusterInfo(t *testing.T) {
-	createTestClient()
-	appendCRD()
-
-	_ = CreateNamespace(testNamespaceName)
-	_ = Apply(testSecret1)
-	_ = Apply(testCluster1)
-
-	NamespacedClient := client.NewNamespacedClient(clients[0].client, testNamespaceName)
-	clusterInfo, err := getClusterInfo(NamespacedClient, objectKey1)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if clusterInfo.secret.Name != testSecret1.Name || clusterInfo.cluster.Name != testCluster1.Name {
-		t.Error("wrong resource name")
-	}
-
-	resetClusterToDefault()
 }

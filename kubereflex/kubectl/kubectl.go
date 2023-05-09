@@ -203,7 +203,6 @@ func Verify(deploymentName string, namespace string, timeout time.Duration) erro
 		fmt.Printf("Verifing the %s deployment: [%s]", deploymentName, animation[frame])
 
 		deployment := &appsv1.Deployment{}
-
 		err := ActiveClientset.client.Get(context.TODO(), key, deployment, &client.GetOptions{})
 		if err != nil {
 			return err
@@ -336,7 +335,7 @@ func Detach(namespace1 string, namespace2 string) error {
 	fmt.Println("Get clusters and secrets info, please wait...")
 
 	SetActiveClientset(clients[0])
-	//TODO: Make a better struct for more compact code
+	// TODO: Make a better struct for more compact code
 	cluster1Info, err1 := getClusterInfo(NamespacedClient1, objectKey1)
 	if err1 != nil {
 		fmt.Printf("%s not here on the main cluster.\n", objectKey1.Name)
