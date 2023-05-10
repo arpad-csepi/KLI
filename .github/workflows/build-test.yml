@@ -43,12 +43,14 @@ jobs:
       - name: Create k8s Kind Cluster (kind-kind)
         uses: helm/kind-action@v1.4.0
         with:
-          cluster_name: kubereflex/kind-config.yaml
+          config: kubereflex/kind-config.yaml
+          cluster_name: kind
 
       - name: Create k8s Kind Cluster (kind-kind2)
         uses: helm/kind-action@v1.4.0
         with:
-          cluster_name: kubereflex/kind2-config.yaml
+          config: kubereflex/kind2-config.yaml
+          cluster_name: kind2
 
       - name: Run example install
         run: go test -v ./... install -r default_active_resource.yaml -R default_passive_resource.yaml -a -v
