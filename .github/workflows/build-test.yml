@@ -53,7 +53,7 @@ jobs:
           cluster_name: kind2
 
       - name: Run example install
-        run: go install -r default_active_resource.yaml -R default_passive_resource.yaml -a -v
+        run: go run . install -r default_active_resource.yaml -R default_passive_resource.yaml -a -v
 
       - name: Run example uninstall
-        run: go uninstall -r default_active_resource.yaml -R default_passive_resource.yaml -d
+        run: go run . uninstall -r default_active_resource.yaml -R default_passive_resource.yaml -d
