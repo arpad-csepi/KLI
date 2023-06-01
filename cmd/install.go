@@ -37,8 +37,10 @@ var installCmd = &cobra.Command{
 			mainClusterConfigPath = *getKubeConfig()
 		}
 
-		fmt.Println("Main cluster context switcher:")
-		mainContext = kubereflex.ChooseContextFromConfig(&mainClusterConfigPath)
+		if mainContext == "" {
+			fmt.Println("Main cluster context switcher:")
+			mainContext = kubereflex.ChooseContextFromConfig(&mainClusterConfigPath)
+		}
 
 		clusterRegistry1 := chartData{
 			chartUrl:       "https://cisco-open.github.io/cluster-registry-controller",
@@ -75,8 +77,10 @@ var installCmd = &cobra.Command{
 			secondaryClusterConfigPath = mainClusterConfigPath
 		}
 		if secondaryClusterConfigPath != "" {
-			fmt.Println("Secondary cluster context switcher:")
-			secondaryContext = kubereflex.ChooseContextFromConfig(&secondaryClusterConfigPath)
+			if secondaryContext == "" {
+				fmt.Println("Secondary cluster context switcher:")
+				secondaryContext = kubereflex.ChooseContextFromConfig(&secondaryClusterConfigPath)
+			}
 
 			clusterRegistry2 := chartData{
 				chartUrl:       "https://cisco-open.github.io/cluster-registry-controller",
@@ -203,6 +207,8 @@ func init() {
 	installCmd.Flags().IntVarP(&timeout, "timeout", "t", 60, "Set verify timeout in seconds")
 	installCmd.Flags().StringVarP(&mainClusterConfigPath, "main-cluster", "c", "", "Main cluster kubeconfig file location")
 	installCmd.Flags().StringVarP(&secondaryClusterConfigPath, "secondary-cluster", "C", "", "Secondary cluster kubeconfig file location")
+	installCmd.Flags().StringVarP(&mainContext, "main-context", "k", "", "Main cluster context name")
+	installCmd.Flags().StringVarP(&secondaryContext, "secondary-context", "K", "", "Secondary cluster context name")
 }
 
 // getKubeConfig is try to find default kube config in some default paths

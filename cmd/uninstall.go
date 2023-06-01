@@ -20,8 +20,10 @@ var uninstallCmd = &cobra.Command{
 			mainClusterConfigPath = *getKubeConfig()
 		}
 
-		fmt.Println("Main cluster context switcher:")
-		mainContext = kubereflex.ChooseContextFromConfig(&mainClusterConfigPath)
+		if mainContext == "" {
+			fmt.Println("Main cluster context switcher:")
+			mainContext = kubereflex.ChooseContextFromConfig(&mainClusterConfigPath)
+		}
 
 		if activeCRDPath != "" {
 			kubereflex.Remove(activeCRDPath, &mainClusterConfigPath, mainContext)
@@ -34,9 +36,11 @@ var uninstallCmd = &cobra.Command{
 			secondaryClusterConfigPath = mainClusterConfigPath
 		}
 		if secondaryClusterConfigPath != "" {
-			fmt.Println("Main cluster context switcher:")
-			secondaryContext = kubereflex.ChooseContextFromConfig(&secondaryClusterConfigPath)
-
+			if secondaryContext == "" {
+				fmt.Println("Main cluster context switcher:")
+				secondaryContext = kubereflex.ChooseContextFromConfig(&secondaryClusterConfigPath)
+			}
+			
 			if passiveCRDPath != "" {
 				kubereflex.Remove(passiveCRDPath, &secondaryClusterConfigPath, secondaryContext)
 			}
@@ -48,8 +52,6 @@ var uninstallCmd = &cobra.Command{
 				kubereflex.Detach(&mainClusterConfigPath, mainContext, &secondaryClusterConfigPath, secondaryContext, "cluster-registry", "cluster-registry")
 			}
 		}
-
-		
 	},
 }
 
@@ -63,6 +65,9 @@ func init() {
 
 	uninstallCmd.Flags().StringVarP(&mainClusterConfigPath, "main-cluster", "c", "", "Main cluster kubeconfig file location")
 	uninstallCmd.Flags().StringVarP(&secondaryClusterConfigPath, "secondary-cluster", "C", "", "Secondary cluster kubeconfig file location")
+
+	installCmd.Flags().StringVarP(&mainContext, "main-context", "k", "", "Main cluster context name")
+	installCmd.Flags().StringVarP(&secondaryContext, "secondary-context", "K", "", "Secondary cluster context name")
 
 	uninstallCmd.Flags().BoolVarP(&detach, "detach", "d", false, "Remove cluster connections")
 }
