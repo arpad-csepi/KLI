@@ -66,8 +66,8 @@ func init() {
 	uninstallCmd.Flags().StringVarP(&mainClusterConfigPath, "main-cluster", "c", "", "Main cluster kubeconfig file location")
 	uninstallCmd.Flags().StringVarP(&secondaryClusterConfigPath, "secondary-cluster", "C", "", "Secondary cluster kubeconfig file location")
 
-	installCmd.Flags().StringVarP(&mainContext, "main-context", "k", "", "Main cluster context name")
-	installCmd.Flags().StringVarP(&secondaryContext, "secondary-context", "K", "", "Secondary cluster context name")
+	uninstallCmd.Flags().StringVarP(&mainContext, "main-context", "k", "", "Main cluster context name")
+	uninstallCmd.Flags().StringVarP(&secondaryContext, "secondary-context", "K", "", "Secondary cluster context name")
 
 	uninstallCmd.Flags().BoolVarP(&detach, "detach", "d", false, "Remove cluster connections")
 }
